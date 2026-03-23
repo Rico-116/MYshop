@@ -3,15 +3,23 @@ package models
 import "time"
 
 type User struct {
-	Username string    `json:"username"`
-	Password string    `json:"password"`
-	Nickname string    `json:"nickname"`
-	Phone    string    `json:"phone"`
-	Email    string    `json:"email"`
-	Avatar   string    `json:"avatar"`
-	Status   int       `json:"status"`
-	CreateAt time.Time `json:"create_at"`
-	UpdateAt string    `json:"update_at"`
+	UserId    uint      `json:"id" gorm:"column:id;primaryKey"`
+	Username  string    `json:"username" gorm:"column:username"`
+	Password  string    `json:"password" gorm:"column:password"`
+	Nickname  string    `json:"nickname" gorm:"column:nickname"`
+	Phone     string    `json:"phone" gorm:"column:phone"`
+	Email     string    `json:"email" gorm:"column:email"`
+	Avatar    string    `json:"avatar" gorm:"column:avatar"`
+	Status    int       `json:"status" gorm:"column:status"`
+	CreatedAt time.Time `json:"created_at" gorm:"column:created_at"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"column:update_at"`
+}
+type SendLoginCodeRequest struct {
+	Email string `json:"email" binding:"required"`
+}
+type EmailLoginRequest struct {
+	Email string `json:"email" binding:"required"`
+	Code  string `json:"code" binding:"required"`
 }
 
 func (User) TableName() string {
@@ -23,6 +31,7 @@ type SendRegisterCodeRequest struct {
 }
 
 type RegisterRequest struct {
+	UserId          string `json:"id"`
 	Username        string `json:"username"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm"`
@@ -31,4 +40,8 @@ type RegisterRequest struct {
 	Nickname        string `json:"nickname"`
 	Phone           string `json:"phone"`
 	Avatar          string `json:"avatar"`
+}
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }

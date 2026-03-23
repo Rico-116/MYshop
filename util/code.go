@@ -8,5 +8,5 @@ import (
 
 func GenerateCode() string { //生成验证码
 	rand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("%0d", rand.Intn(1000000))
+	return fmt.Sprintf("%06d", rand.Intn(1000000))
 }

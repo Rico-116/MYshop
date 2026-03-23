@@ -26,10 +26,10 @@ type Config struct {
 
 var AppConfig = Config{
 	MySQL: MySQLConfig{
-		DSN: "root:123456@tcp(192.168.1.103)/shop?charset=utf8mb4&parseTime=True&loc=Local",
+		DSN: "root:123456@tcp(192.168.0.147)/shop?charset=utf8mb4&parseTime=True&loc=Local",
 	},
 	Redis: RedisConfig{
-		Addr:     "192.168.1.103",
+		Addr:     "192.168.0.147",
 		Password: "123456",
 		DB:       0,
 	},

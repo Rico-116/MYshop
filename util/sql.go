@@ -14,7 +14,7 @@ var (
 )
 
 func init() {
-	Db, err = gorm.Open(mysql.Open("root:123456@tcp(192.168.1.103)/shop?charset=utf8mb4&parseTime=True&loc=Local"))
+	Db, err = gorm.Open(mysql.Open("root:123456@tcp(192.168.0.147)/shop?charset=utf8mb4&parseTime=True&loc=Local"))
 	if err != nil {
 		log.Fatal("mysql 连接失败：%v", err)
 	}

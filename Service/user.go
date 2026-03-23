@@ -62,7 +62,52 @@ func SendRegisterCode(req models.SendRegisterCodeRequest) error {
 	}
 	return nil
 }
+func SendLoginCode(req models.SendLoginCodeRequest) error {
+	if req.Email == "" {
+		return errors.New("邮箱不能为空")
+	}
+	if !isValidEmail(req.Email) {
+		return errors.New("邮箱格式不正确")
+	}
 
+	user, err := dao.GetByEmail(req.Email)
+	if err != nil {
+		return errors.New("查询邮箱失败")
+	}
+	if user == nil {
+		return errors.New("该邮箱未注册")
+	}
+
+	ctx := context.Background()
+	codeKey := fmt.Sprintf("login_code:%s", req.Email)
+	cooldownKey := fmt.Sprintf("login_cooldown:%s", req.Email)
+
+	cooldownExists, err := util.RDB.Exists(ctx, cooldownKey).Result()
+	if err != nil {
+		return errors.New("查询失败")
+	}
+	if cooldownExists > 0 {
+		return errors.New("操作过于频繁，请稍后再试")
+	}
+
+	code := util.GenerateCode()
+	err = util.SendLoginCodeEmail(req.Email, code)
+	if err != nil {
+		return errors.New("邮件发送失败")
+	}
+
+	err = util.RDB.Set(ctx, codeKey, code, 5*time.Minute).Err()
+	if err != nil {
+		return errors.New("验证码保存失败")
+	}
+
+	err = util.RDB.Set(ctx, cooldownKey, 1, 60*time.Second).Err()
+	if err != nil {
+		return errors.New("发送冷却保存失败")
+	}
+
+	return nil
+}
 func Register(req models.RegisterRequest) error {
 	if req.Username == "" {
 		return errors.New("用户名不能为空")
@@ -113,14 +158,14 @@ func Register(req models.RegisterRequest) error {
 		return errors.New("密码加密失败")
 	}
 	user := &models.User{
-		Username: req.Username,
-		Password: hashedPassword,
-		Nickname: req.Nickname,
-		Email:    req.Email,
-		Status:   1,
-		Phone:    req.Phone,
-		Avatar:   req.Avatar,
-		CreateAt: time.Now(),
+		Username:  req.Username,
+		Password:  hashedPassword,
+		Nickname:  req.Nickname,
+		Email:     req.Email,
+		Status:    1,
+		Phone:     req.Phone,
+		Avatar:    req.Avatar,
+		CreatedAt: time.Now(),
 	}
 	err = dao.CreateUser(user)
 	if err != nil {
@@ -144,4 +189,38 @@ func SendEmailCode(c *gin.Context) error {
 
 	}
 	return nil
+}
+
+func EmailLogin(req models.EmailLoginRequest) (string, *models.User, error) {
+	if req.Email == "" {
+		return "", nil, errors.New("邮箱不能为空")
+	}
+	if req.Code == "" {
+		return "", nil, errors.New("验证码不能为空")
+	}
+	if !isValidEmail(req.Email) {
+		return "", nil, errors.New("邮箱格式不正确")
+	}
+	ctx := context.Background()
+	codeKey := fmt.Sprintf("login_code:%s", req.Email)
+	realCode, err := util.RDB.Get(ctx, codeKey).Result()
+	if err != nil {
+		return "", nil, errors.New("验证码过期或者不存在")
+	}
+	if realCode != req.Code {
+		return "", nil, errors.New("验证码错误")
+	}
+	user, err := dao.GetByEmail(req.Email)
+	if err != nil {
+		return "", nil, errors.New("查询用户失败")
+	}
+	if user == nil {
+		return "", nil, errors.New("用户不存在")
+	}
+	token, err := util.GenerateToken(user.UserId, user.Username)
+	if err != nil {
+		return "", nil, errors.New("生成token失败")
+	}
+	_ = util.RDB.Del(ctx, codeKey).Err()
+	return token, user, nil
 }
