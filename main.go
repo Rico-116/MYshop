@@ -7,9 +7,8 @@ package main
 // @BasePath        /api/v1
 import (
 	"MYshop/controller"
-	"MYshop/logger"
+	"MYshop/package/logger"
 	_ "MYshop/util"
-	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,13 +17,13 @@ func main() {
 	//fmt.Println("hash =", hash)
 	//fmt.Println(util.CheckPasswordHash("123456", hash))  // 应该是 true
 	//fmt.Println(util.CheckPasswordHash("1234567", hash)) // 应该是 false
-	if err := logger.Init(); err != nil {
-		panic(fmt.Sprintf("日志初始化失败:%v", err))
+	if err := logger.Init("dev"); err != nil {
+		panic(err)
 	}
 	defer logger.Sync()
-	logger.Sugar.Infow("项目启动成功",
-		"app", "MYshop",
-	)
+
+	logger.Log.Info("服务启动成功")
+	logger.Sugar.Infof("服务已启动, port=%d", 8080)
 	r := gin.Default()
 	userGroup := r.Group("/api/user")
 	{
