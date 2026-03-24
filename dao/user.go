@@ -66,3 +66,8 @@ func GetByUsername(username string) (*models.User, error) {
 	}
 	return &user, nil
 }
+
+func UpdatePassword(email string, password string) error {
+	sql := "UPDATE user SET `password` = ? WHERE email = ?"
+	return util.Db.Exec(sql, password, email).Error
+}

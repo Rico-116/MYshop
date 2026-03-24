@@ -17,6 +17,9 @@ type User struct {
 type SendLoginCodeRequest struct {
 	Email string `json:"email" binding:"required"`
 }
+type SendResetPasswordRequest struct {
+	Email string `json:"email" binding:"required"`
+}
 type EmailLoginRequest struct {
 	Email string `json:"email" binding:"required"`
 	Code  string `json:"code" binding:"required"`
@@ -44,4 +47,10 @@ type RegisterRequest struct {
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+type ResetPasswordRequest struct {
+	Email           string `json:"email"`
+	Code            string `json:"code"`
+	NewPassword     string `json:"new_password"`
+	ConfirmPassword string `json:"confirm_password"`
 }

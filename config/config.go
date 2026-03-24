@@ -26,10 +26,10 @@ type Config struct {
 
 var AppConfig = Config{
 	MySQL: MySQLConfig{
-		DSN: "root:123456@tcp(192.168.0.147)/shop?charset=utf8mb4&parseTime=True&loc=Local",
+		DSN: "root:123456@tcp(127.0.0.1:3306)/shop?charset=utf8mb4&parseTime=True&loc=Local",
 	},
 	Redis: RedisConfig{
-		Addr:     "192.168.0.147",
+		Addr:     "127.0.0.1:6379",
 		Password: "123456",
 		DB:       0,
 	},
@@ -37,7 +37,7 @@ var AppConfig = Config{
 		Host:     "smtp.qq.com",
 		Port:     587,
 		Username: "235038369@qq.com",
-		Password: "urthfqcguamfbhdf",
+		Password: "wrhmgtumsclpcbcb",
 		From:     "235038369@qq.com",
 	},
 }
