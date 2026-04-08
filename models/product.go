@@ -14,4 +14,6 @@ type Product struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 	Rating      float64   `json:"rating"`
 	RatingCount int       `json:"rating_count"`
+	ClickCount  int       `json:"click_count"`
+	Price       float64   `json:"price"`
 }

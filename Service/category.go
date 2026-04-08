@@ -32,3 +32,25 @@ func GetCategoryTree() ([]models.CategoryTree, error) {
 	}
 	return result, nil
 }
+func GetCategoryDisplay(categoryId int) (*models.CategoryDisplay, error) {
+	currentCategory, err := dao.GetCategoryById(categoryId)
+	if err != nil {
+		return nil, err
+	}
+	subCategories, err := dao.GetChildCategoryList(categoryId)
+	if err != nil {
+		return nil, err
+	}
+	products, err := dao.GetProductByCategoryId(categoryId)
+	if err != nil {
+		return nil, err
+	}
+	isLeaf := len(subCategories) == 0 //用于判断是不是叶节点
+	result := &models.CategoryDisplay{
+		CurrentCategory: *currentCategory,
+		SubCategories:   subCategories,
+		ProductList:     products,
+		IsLeaf:          isLeaf,
+	}
+	return result, nil
+}

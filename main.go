@@ -6,6 +6,7 @@ package main
 // @host            localhost:8080
 // @BasePath        /api/v1
 import (
+	"MYshop/Service"
 	"MYshop/controller"
 	"MYshop/package/logger"
 	_ "MYshop/util"
@@ -29,6 +30,7 @@ func main() {
 	logger.Log.Info("服务启动成功")
 	logger.Sugar.Infof("服务已启动, port=%d", 8080)
 	r := gin.Default()
+	Service.StartProductHotWriteBackWorker(5 * time.Minute)
 	//r.GET("/ping", func(c *gin.Context) {
 	//	c.JSON(200, gin.H{"msg": "pong"})
 	//})
@@ -48,6 +50,7 @@ func main() {
 	//r.OPTIONS("/*path", func(c *gin.Context) {
 	//	c.Status(204)
 	//})
+	r.Static("/static", "./static")
 	userGroup := r.Group("/api/user")
 	{
 		userGroup.POST("/send_code", controller.SendRegister)
@@ -64,8 +67,15 @@ func main() {
 	{
 		indexGroup.GET("/banners", controller.GetBannerList)
 		indexGroup.GET("/categories", controller.GetCategoryTree)
+		indexGroup.GET("/products", controller.GetProductList)
+		indexGroup.GET("/product/detail", controller.GetProductDetail)
+		indexGroup.GET("/products/category", controller.GetProductListByCategory)
+		indexGroup.GET("/category/display", controller.GetCategoryDisplay)
+		indexGroup.GET("/products/hot", controller.GetHotProductList)
 	}
-	//authApi:= r.Group("/api/auth")
-	//authApi.Use(middleware.JWTAuthMiddleware()){}
+	//authGroup:=r.Group("/api/auth")
+	//authGroup.Use(middleware.JWTAuthMiddleware()){
+	//	authGroup.POST("/cart/add", controller.AddCart)
+	//}
 	r.Run(":8080")
 }

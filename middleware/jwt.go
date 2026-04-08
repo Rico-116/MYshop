@@ -17,7 +17,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			})
 			return
 		}
-		parts := strings.SplitN(authHeader, "", 2)
+		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code": 401,
