@@ -53,9 +53,10 @@ func RecordProductView(ProductID int, identity string) error {
 }
 func GetHotProducts(limit int) ([]models.Product, error) {
 	if limit <= 0 {
-		limit = 8
+		limit = 10
 	}
-
+	//logger.Log.Info("<UNK>", zap.Int("limit", limit))
+	//fmt.Println(limit)
 	// 1. 先从 Redis 热榜取
 	idStrs, err := util.RDB.ZRevRange(hotCtx, util.HotProductZetKey, 0, int64(limit-1)).Result()
 	if err == nil && len(idStrs) > 0 {
@@ -88,7 +89,9 @@ func GetHotProducts(limit int) ([]models.Product, error) {
 			if len(ordered) > 0 {
 				return ordered, nil
 			}
+			//return products, nil
 		}
+
 	}
 
 	// 2. Redis 为空时，走数据库兜底

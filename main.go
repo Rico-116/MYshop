@@ -8,6 +8,7 @@ package main
 import (
 	"MYshop/Service"
 	"MYshop/controller"
+	"MYshop/middleware"
 	"MYshop/package/logger"
 	_ "MYshop/util"
 	"github.com/gin-contrib/cors"
@@ -73,9 +74,10 @@ func main() {
 		indexGroup.GET("/category/display", controller.GetCategoryDisplay)
 		indexGroup.GET("/products/hot", controller.GetHotProductList)
 	}
-	//authGroup:=r.Group("/api/auth")
-	//authGroup.Use(middleware.JWTAuthMiddleware()){
-	//	authGroup.POST("/cart/add", controller.AddCart)
-	//}
+	authGroup := r.Group("/api/auth")
+	authGroup.Use(middleware.JWTAuthMiddleware())
+	{
+		authGroup.POST("/cart/add", controller.AddCart)
+	}
 	r.Run(":8080")
 }

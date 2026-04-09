@@ -67,3 +67,25 @@ func IsLeafCategory(categoryId int) (bool, error) {
 	}
 	return count == 0, nil
 }
+func GetSkuCategoryById(id uint) (*models.Category, error) {
+	sql := `
+		SELECT
+			id,
+			name,
+			parent_id,
+			sort,
+			status,
+			icon,
+			created_at,
+			updated_at
+		FROM category
+		where id=? AND status=1 LIMIT 1
+	`
+	var category models.Category
+	err := util.Db.Raw(sql, id).Scan(&category).Error
+	if err != nil {
+		logger.Log.Error("获取商品类别", zap.Error(err))
+		return nil, err
+	}
+	return &category, nil
+}

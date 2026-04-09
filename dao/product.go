@@ -70,7 +70,8 @@ func GetProductByIDs(id []int) ([]models.Product, error) {
 			updated_at,
 			rating,
 			rating_count,
-			click_count
+			click_count,
+			price
 		FROM product
 		WHERE id IN ? AND status = 1
 		ORDER BY id DESC

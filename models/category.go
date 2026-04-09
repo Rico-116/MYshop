@@ -22,3 +22,7 @@ type CategoryDisplay struct {
 	ProductList     []Product  `json:"product_list"`
 	IsLeaf          bool       `json:"is_leaf"` //只有叶子节点才有商品，那么在不是叶子节点是要怎么办
 }
+type CategoryPathItem struct {
+	Id   uint   `json:"id"`
+	Name string `json:"name"`
+}

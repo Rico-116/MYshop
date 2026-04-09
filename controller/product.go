@@ -46,6 +46,7 @@ func GetProductDetail(c *gin.Context) {
 		util.Fail(c, 500, "获取商品sku失败")
 		return
 	}
+
 	var defaultSkuId uint = 0
 	for _, sku := range skuList {
 		if sku.Stock > 0 {
@@ -64,10 +65,16 @@ func GetProductDetail(c *gin.Context) {
 	if err = Service.RecordProductView(int(id64), identity); err != nil {
 		logger.Log.Warn("记录商品热度失败", zap.Error(err), zap.Uint64("product_id", id64))
 	}
+	Category, err := dao.GetSkuCategoryById(product.CategoryId)
+	if err != nil {
+		logger.Log.Warn("获取商品类别失败", zap.Error(err))
+		util.Fail(c, 500, "获取商品类别失败，请稍后再试")
+	}
 	util.Success(c, "获取商品详情成功", gin.H{
-		"detail":         product,
-		"sku_list":       skuList,
-		"default_sku_id": defaultSkuId,
+		"detail":       product,
+		"sku_list":     skuList,
+		"sku_category": Category.Name,
+		"category_id":  Category.Id,
 	})
 }
 func GetProductListByCategory(c *gin.Context) {
@@ -89,10 +96,13 @@ func GetProductListByCategory(c *gin.Context) {
 	})
 }
 func GetHotProductList(c *gin.Context) {
-	limitStr := c.DefaultQuery("limit", "10")
+	//logger.Log.Info("limit",zap.Any("limit", c.Request.URL.Query().Get("limit")))
+	limitStr := "10"
+	//logger.Log.Info("<UNK>", zap.Any("limit", limitStr))
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
-		limit = 8
+
+		limit = 10
 	}
 	list, err := Service.GetHotProducts(limit)
 	if err != nil {
@@ -100,6 +110,7 @@ func GetHotProductList(c *gin.Context) {
 		util.Fail(c, 500, "获取热门推荐失败")
 		return
 	}
+	//logger.Log.Info("<UNK>", zap.Any("list", list))
 	util.Success(c, "获取热门推荐成功", gin.H{
 		"list": list,
 	})
