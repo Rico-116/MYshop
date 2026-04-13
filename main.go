@@ -78,6 +78,10 @@ func main() {
 	authGroup.Use(middleware.JWTAuthMiddleware())
 	{
 		authGroup.POST("/cart/add", controller.AddCart)
+		authGroup.GET("/cart/list", controller.GetCartList)
+		authGroup.PUT("/cart/quantity", controller.ChangeCartQuantity)
+		authGroup.PUT("/cart/check", controller.ChangeCartChecked)
+		authGroup.DELETE("/cart/delete", controller.DeleteCart)
 	}
 	r.Run(":8080")
 }

@@ -12,7 +12,7 @@ func BatchAddProductClickCount(click map[int]int64) error {
 		return nil
 	}
 	for productID, delta := range click {
-		sql := "UPDATE product SET click_count = click_count + ? WHERE product_id = ?"
+		sql := "UPDATE product SET click_count = click_count + ? WHERE id = ?"
 		if err := util.Db.Exec(sql, delta, productID).Error; err != nil {
 			logger.Log.Error("回写商品点击量失败", zap.Int("product_id", productID), zap.Int64("delta", delta), zap.Error(err))
 			return err
