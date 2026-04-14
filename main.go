@@ -79,8 +79,8 @@ func main() {
 	{
 		authGroup.POST("/cart/add", controller.AddCart)
 		authGroup.GET("/cart/list", controller.GetCartList)
-		authGroup.PUT("/cart/quantity", controller.ChangeCartQuantity)
-		authGroup.PUT("/cart/check", controller.ChangeCartChecked)
+		authGroup.PUT("/cart/quantity", controller.UpdateCartQuantity)
+		authGroup.PUT("/cart/check", controller.UpdateCartChecked)
 		authGroup.DELETE("/cart/delete", controller.DeleteCart)
 	}
 	r.Run(":8080")

@@ -44,3 +44,15 @@ type UpdateCartCheckRequest struct {
 type DeleteCartRequest struct {
 	CartId uint `json:"cart_id" binding:"required"`
 }
+type CartDisplayItem struct {
+	CartId      uint    `json:"cart_id" `
+	SkuId       uint    `json:"sku_id" `
+	ProductId   uint    `json:"product_id" `
+	Title       string  `json:"title" `
+	Image       string  `json:"image" `
+	Price       float64 `json:"price" `
+	Stock       int     `json:"stock" `
+	Quantity    int     `json:"quantity" `
+	Checked     int     `json:"checked" `
+	TotalAmount float64 `json:"total_amount" `
+}

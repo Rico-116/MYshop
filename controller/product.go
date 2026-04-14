@@ -11,7 +11,7 @@ import (
 )
 
 func GetProductList(c *gin.Context) {
-	list, err := dao.GetProductList()
+	list, err := Service.GetProductListWithCache()
 	if err != nil {
 		logger.Log.Error("获取商品列表失败", zap.Error(err))
 		util.Fail(c, 500, "获取商品列表失败")
@@ -29,7 +29,7 @@ func GetProductDetail(c *gin.Context) {
 		util.Fail(c, 400, "商品id参数错误")
 		return
 	}
-	product, err := dao.GetProductById(int(id64))
+	product, err := Service.GetProductDetailWithCache(int(id64))
 	if err != nil {
 		logger.Log.Warn("获取商品详情失败", zap.Error(err))
 		util.Fail(c, 500, "获取商品详情失败")
@@ -40,7 +40,7 @@ func GetProductDetail(c *gin.Context) {
 		util.Fail(c, 404, "商品不存在")
 		return
 	}
-	skuList, err := dao.GetProductSkuListByProductId(int(id64))
+	skuList, err := Service.GetProductSkuListWithCache(int(id64))
 	if err != nil {
 		logger.Log.Warn("获取商品sku失败", zap.Error(err))
 		util.Fail(c, 500, "获取商品sku失败")
@@ -71,10 +71,11 @@ func GetProductDetail(c *gin.Context) {
 		util.Fail(c, 500, "获取商品类别失败，请稍后再试")
 	}
 	util.Success(c, "获取商品详情成功", gin.H{
-		"detail":       product,
-		"sku_list":     skuList,
-		"sku_category": Category.Name,
-		"category_id":  Category.Id,
+		"detail":         product,
+		"sku_list":       skuList,
+		"sku_category":   Category.Name,
+		"category_id":    Category.Id,
+		"default_sku_id": defaultSkuId,
 	})
 }
 func GetProductListByCategory(c *gin.Context) {
@@ -85,7 +86,7 @@ func GetProductListByCategory(c *gin.Context) {
 		util.Fail(c, 400, "分类id参数错误")
 		return
 	}
-	list, err := dao.GetProductByCategoryId(int(categoryId))
+	list, err := Service.GetProductListByCategoryWithCache(int(categoryId))
 	if err != nil {
 		logger.Log.Warn("按分类获取商品失败", zap.Error(err))
 		util.Fail(c, 500, "按分类获取商品失败")

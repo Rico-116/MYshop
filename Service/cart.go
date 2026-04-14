@@ -4,70 +4,39 @@ import (
 	"MYshop/dao"
 	"MYshop/models"
 	"MYshop/package/logger"
+	"MYshop/util"
+	"encoding/json"
 	"errors"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"strconv"
+	"time"
 )
 
-func AddCart(userId uint, req models.AddCartRequest) error {
-	if userId == 0 {
-		return errors.New("请先登录")
-	}
-	if req.SkuId == 0 {
-		return errors.New("sku_id不能为空")
-	}
-	if req.Quantity <= 0 {
-		return errors.New("加入购物车数量必须大于0")
-	}
-	//查sku
-	sku, err := dao.GetSkuById(req.SkuId)
-	if err != nil {
-		logger.Log.Error("加入购物车失败：查询sku失败", zap.Error(err), zap.Uint("sku_id", req.SkuId))
-		return errors.New("查询商品规格失败")
-	}
-	if sku == nil || sku.Id == 0 {
-		return errors.New("商品规格不存在或者已下架")
-	}
-	product, err := dao.GetProductById(int(sku.ProductId))
-	if err != nil {
-		logger.Log.Error("加入购物车失败：查询商品失败", zap.Error(err), zap.Uint("product_id", sku.ProductId))
-		return errors.New("查询商品失败")
-	}
-	if product == nil || product.Id == 0 {
-		return errors.New("商品不存在或者已下架")
-	}
-	cart, err := dao.GetCartByUserAndSku(userId, req.SkuId)
-	if err != nil {
-		logger.Log.Error("加入购物车失败：查询购物车失败", zap.Error(err), zap.Uint("user_id", userId), zap.Uint("sku_id", req.SkuId))
-		return errors.New("查询购物车失败")
-	}
+const CartListTTL = 10 * time.Minute
 
-	finalQty := req.Quantity
-	if cart != nil && cart.Id > 0 {
-		finalQty = cart.Quantity + req.Quantity
+func AddCart(userId uint, skuID uint, num int) error {
+	cart, err := dao.GetCartByUserAndSku(userId, skuID)
+	if err != nil {
+		return err
 	}
-	if int(finalQty) > sku.Stock {
-		return errors.New("加入购物车失败，库存不足")
-	}
-	if cart != nil && cart.Id > 0 {
-		err = dao.UpdateCartQuantity(cart.Id, int(finalQty))
-		if err != nil {
-			logger.Log.Error("加入购物车失败：更新购物车失败", zap.Error(err), zap.Uint("cart_id", cart.Id))
-			return errors.New("加入购物车失败")
+	if cart != nil && cart.Id != 0 {
+		newNum := cart.Quantity + uint(num)
+		if err := dao.UpdateCartQuantity(cart.Id, int(newNum)); err != nil {
+			return err
 		}
 	} else {
 		newCart := &models.Cart{
-			UserId:    userId,
-			ProductId: sku.ProductId,
-			SkuId:     sku.Id,
-			Quantity:  req.Quantity,
-			Checked:   1,
+			UserId:   userId,
+			SkuId:    skuID,
+			Quantity: uint(num),
+			Checked:  1,
 		}
-		err = dao.CreateCart(newCart)
-		if err != nil {
-			logger.Log.Error("加入购物车失败：新增购物车失败", zap.Error(err), zap.Any("cart", newCart))
-			return errors.New("加入购物车失败")
+		if err := dao.CreateCart(newCart); err != nil {
+			return err
 		}
 	}
+	DeleteCartListCache(strconv.Itoa(int(userId)))
 	return nil
 }
 func GetCartList(userId uint) (map[string]interface{}, error) {
@@ -168,5 +137,154 @@ func DeleteCart(userId uint, cartId uint) error {
 	if err != nil {
 		return errors.New("删除购物车失败")
 	}
+	return nil
+}
+func GetCartListFromCache(UserID string) ([]models.CartDisplayItem, error) {
+	key := util.CartListKey(UserID)
+	val, err := util.RDB.Get(util.Ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var list []models.CartDisplayItem
+	if err := json.Unmarshal([]byte(val), &list); err != nil {
+		logger.Log.Warn("购物车缓存反序列化失败", zap.Error(err), zap.String("userId", UserID))
+		return nil, nil
+	}
+	return list, nil
+}
+func SetCartListToCache(UserID string, list []models.CartDisplayItem) {
+	key := util.CartListKey(UserID)
+	data, err := json.Marshal(list)
+	if err != nil {
+		logger.Log.Error("缓存序列化失败", zap.Error(err), zap.String("userId", UserID))
+		return
+	}
+	if err := util.RDB.Set(util.Ctx, key, data, CartListTTL).Err(); err != nil {
+		logger.Log.Error("写入购物车缓存失败", zap.Error(err), zap.String("userId", UserID))
+	}
+}
+func DeleteCartListCache(UserID string) {
+	key := util.CartListKey(UserID)
+	if err := util.RDB.Del(util.Ctx, key).Err(); err != nil {
+		logger.Log.Error("删除购物车缓存失败", zap.Error(err), zap.String("userId", UserID))
+	}
+}
+func BuildCartListFromDB(userID uint) ([]models.CartDisplayItem, error) {
+	cartList, err := dao.GetCartListByUserId(userID)
+	if err != nil {
+		return nil, err
+	}
+	list := make([]models.CartDisplayItem, 0, len(cartList))
+	for _, item := range cartList {
+		sku, err := dao.GetSkuById(item.SkuId)
+		if err != nil {
+			return nil, err
+		}
+		if sku == nil || sku.Id == 0 {
+			continue
+		}
+		product, err := dao.GetProductById(int(item.ProductId))
+		if err != nil {
+			return nil, err
+		}
+		if product == nil || product.Id == 0 {
+			continue
+		}
+		price := sku.Price
+		quantity := item.Quantity
+		totalAmount := price * float64(quantity)
+		list = append(list, models.CartDisplayItem{
+			CartId:      item.CartId,
+			SkuId:       sku.Id,
+			ProductId:   product.Id,
+			Title:       product.Subtitle,
+			Image:       product.MainImage,
+			Price:       price,
+			Stock:       sku.Stock,
+			Quantity:    quantity,
+			Checked:     item.Checked,
+			TotalAmount: totalAmount,
+		})
+
+	}
+	return list, nil
+}
+func GetCartDisplayList(userID uint) ([]models.CartDisplayItem, error) {
+	cacheKeyUserID := strconv.Itoa(int(userID))
+	list, err := BuildCartListFromDB(userID)
+	if err != nil {
+		return nil, err
+	}
+	if list != nil {
+		return list, nil
+	}
+	list, err = BuildCartListFromDB(userID)
+	if err != nil {
+		return nil, err
+	}
+	SetCartListToCache(cacheKeyUserID, list)
+	return list, nil
+}
+func UpdateCartChecked(userID uint, cartId uint, checked bool) error {
+	cart, err := dao.GetCartById(userID, cartId)
+	if err != nil {
+		return err
+	}
+	if cart == nil || cart.Id == 0 {
+		return errors.New("购物车记录不存在")
+	}
+	if cart.Id != userID {
+		return errors.New("无权操作该购物车")
+	}
+	isChecked := 0
+	if checked {
+		isChecked = 1
+	}
+	if err := dao.UpdateCartChecked(cartId, isChecked); err != nil {
+		return err
+	}
+	DeleteCartListCache(strconv.Itoa(int(userID)))
+	return nil
+}
+
+func UpdateCartQuantity(userID uint, cartId uint, quantity int) error {
+	if quantity <= 0 {
+		return errors.New("数量必须大于0")
+	}
+	cart, err := dao.GetCartById(userID, cartId)
+	if err != nil {
+		return err
+	}
+	if cart == nil || cart.Id == 0 {
+		return errors.New("购物车记录不存在")
+	}
+	if cart.Id != userID {
+		return errors.New("无权操作该购物车")
+	}
+	if err := dao.UpdateCartQuantity(cartId, quantity); err != nil {
+		return err
+	}
+	DeleteCartListCache(strconv.Itoa(int(userID)))
+	return nil
+}
+
+func DeleteCartItem(userID uint, cartId uint) error {
+	cart, err := dao.GetCartById(userID, cartId)
+	if err != nil {
+		return err
+	}
+	if cart == nil || cart.Id == 0 {
+		return errors.New("购物车记录不存在")
+	}
+	if cart.Id != userID {
+		return errors.New("无权操作该购物车")
+	}
+	if err := dao.DeleteCartById(cartId); err != nil {
+		return err
+	}
+	DeleteCartListCache(strconv.Itoa(int(userID)))
 	return nil
 }

@@ -1,20 +1,23 @@
 package util
 
 import (
+	"MYshop/config"
 	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 )
 
-var RDB *redis.Client
+var (
+	RDB *redis.Client
+	Ctx = context.Background()
+)
 
 func init() {
 	RDB = redis.NewClient(&redis.Options{
-		Addr:     "192.168.0.147:6379",
-		Password: "123456",
-		DB:       0,
+		Addr:     config.AppConfig.Redis.Addr,
+		Password: config.AppConfig.Redis.Password,
+		DB:       config.AppConfig.Redis.DB,
 	})
-	Ctx := context.Background()
 	res, err := RDB.Ping(Ctx).Result()
 	if err != nil {
 		panic(err)
