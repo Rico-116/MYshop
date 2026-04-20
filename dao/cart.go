@@ -74,7 +74,7 @@ func CreateCart(cart *models.Cart) error {
 	return nil
 }
 
-func UpdateCartQuantity(cartId uint, quantity int) error {
+func UpdateCartQuantity(productID uint, cartId uint, quantity int) error {
 	sql := `UPDATE cart
 		SET quantity = ?, updated_at = NOW()
 		WHERE id = ?`
@@ -111,9 +111,10 @@ func GetCartListByUserId(userId uint) ([]models.CartItem, error) {
 		logger.Log.Error("查询购物车列表失败", zap.Error(err), zap.Uint("user_id", userId))
 		return nil, err
 	}
+	//logger.Log.Debug("<UNK>", zap.Any("list", list))
 	return list, nil
 }
-func GetCartById(cartId, userId uint) (*models.Cart, error) {
+func GetCartById(userId, cartId uint) (*models.Cart, error) {
 	var cart models.Cart
 	sql := `
 		SELECT
@@ -134,6 +135,7 @@ func GetCartById(cartId, userId uint) (*models.Cart, error) {
 		logger.Log.Error("查询购物车详情失败", zap.Error(err), zap.Uint("user_id", userId), zap.Uint("cart_id", cartId))
 		return nil, err
 	}
+	//logger.Log.Debug("", zap.Any("cart", cart))
 	return &cart, nil
 }
 func UpdateCartChecked(cartId uint, checked int) error {

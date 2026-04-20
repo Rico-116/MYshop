@@ -82,6 +82,14 @@ func main() {
 		authGroup.PUT("/cart/quantity", controller.UpdateCartQuantity)
 		authGroup.PUT("/cart/check", controller.UpdateCartChecked)
 		authGroup.DELETE("/cart/delete", controller.DeleteCart)
+		authGroup.POST("/address/add", controller.AddAddress)
+		authGroup.GET("/address/list", controller.GetAddressList)
+		authGroup.PUT("/address/default", controller.SetDefaultAddress)
+		authGroup.POST("/order/create", controller.CreateOrder)
+	}
+	adminGroup := r.Group("/api/admin")
+	{
+		adminGroup.POST("/login", controller.AdminLogin)
 	}
 	r.Run(":8080")
 }
