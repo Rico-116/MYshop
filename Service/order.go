@@ -1,0 +1,464 @@
+package Service
+
+import (
+	"MYshop/dao"
+	"MYshop/models"
+	"MYshop/package/logger"
+	"MYshop/util"
+	"errors"
+	"fmt"
+	"go.uber.org/zap"
+	"strconv"
+	"time"
+)
+
+func CreateOrder(userId uint, req models.CreateOrderRequest) (*models.CreateOrderResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+	if req.AddressId == 0 {
+		return nil, errors.New("请选择收货地址")
+	}
+	if req.SourceType != "cart" && req.SourceType != "direct" {
+		return nil, errors.New("下单来源错误")
+	}
+	addr, err := dao.GetAddressByIdAndUserId(req.AddressId, userId)
+	if err != nil {
+		return nil, err
+	}
+	if addr == nil || addr.Id == 0 {
+		return nil, errors.New("收货地址不存在")
+	}
+	items, totalAmount, err := buildOrderItemsBySource(userId, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, errors.New("没有可下单的商品")
+	}
+	orderNo := generateOrderNo(userId)
+	freightAmount := 0.0
+	couponAmount := 0.0
+	payAmount := totalAmount + freightAmount - couponAmount
+	tx := util.Db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	for _, item := range items {
+		if err := dao.DeductSkuStockTx(tx, item.SkuId, item.Quantity); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+	order := &models.Order{
+		OrderNo:               orderNo,
+		UserId:                userId,
+		Status:                models.OrderStatusUnpaid,
+		TotalAmount:           totalAmount,
+		PayAmount:             payAmount,
+		CouponAmount:          couponAmount,
+		FreightAmount:         freightAmount,
+		ReceiverName:          addr.ReceiverName,
+		ReceiverPhone:         addr.ReceiverPhone,
+		ReceiverProvince:      addr.Province,
+		ReceiverCity:          addr.City,
+		ReceiverDistrict:      addr.District,
+		ReceiverDetailAddress: addr.DetailAddress,
+		Remark:                req.Remark,
+	}
+	orderId, err := dao.CreateOrderTx(tx, order)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	for _, item := range items {
+		orderItem := &models.OrderItem{
+			OrderId:      orderId,
+			OrderNo:      orderNo,
+			UserId:       userId,
+			ProductId:    item.ProductId,
+			SkuId:        item.SkuId,
+			ProductName:  item.ProductName,
+			ProductImage: item.ProductImage,
+			SkuName:      item.SkuName,
+			Price:        item.Price,
+			Quantity:     item.Quantity,
+			TotalAmount:  item.TotalAmount,
+		}
+		if err := dao.CreateOrderItemTx(tx, orderItem); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+	}
+	if req.SourceType == "cart" && len(req.CartIds) > 0 {
+		if err := dao.DeleteCartItemByIdsTx(tx, userId, req.CartIds); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	if err := PublishOrderCloseDelay(orderNo, userId); err != nil {
+		logger.Log.Error("发送延迟关单消息失败",
+			zap.String("order_no", orderNo),
+			zap.Uint("user_id", userId),
+			zap.Error(err))
+	} else {
+		logger.Log.Info("发送延迟关单消息成功",
+			zap.String("order_no", orderNo),
+			zap.Uint("user_id", userId),
+		)
+	}
+	if req.SourceType == "cart" {
+		DeleteCartListCache(strconv.Itoa(int(userId)))
+	}
+	logger.Log.Info("创建订单成功",
+		zap.Uint("user_id", userId),
+		zap.String("order_no", orderNo),
+		zap.Uint("order_id", orderId),
+	)
+	return &models.CreateOrderResult{
+		OrderId:     orderId,
+		OrderNo:     orderNo,
+		TotalAmount: totalAmount,
+		PayAmount:   payAmount,
+		ItemCount:   len(items),
+		Status:      models.OrderStatusUnpaid,
+		StatusText:  models.GetOrderStatusText(models.OrderStatusUnpaid),
+	}, nil
+}
+func buildOrderItemsBySource(userId uint, req models.CreateOrderRequest) ([]models.OrderBuyItem, float64, error) {
+	switch req.SourceType {
+	case "cart":
+		return buildOrderItemsFromCart(userId, req.CartIds)
+	case "direct":
+		return buildOrderItemsFromDirect(req.SkuId, req.Quantity)
+	default:
+		return nil, 0, errors.New("非法下单来源")
+	}
+}
+
+func buildOrderItemsFromCart(userId uint, cartIds []uint) ([]models.OrderBuyItem, float64, error) {
+	if len(cartIds) == 0 {
+		return nil, 0, errors.New("请选择要下单的购物车商品")
+	}
+
+	list, err := dao.GetCartOrderItemsByIds(userId, cartIds)
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(list) == 0 {
+		return nil, 0, errors.New("未找到可下单购物车商品")
+	}
+
+	totalAmount := 0.0
+	validItems := make([]models.OrderBuyItem, 0, len(list))
+
+	for _, item := range list {
+		if item.ProductId == 0 || item.SkuId == 0 {
+			return nil, 0, errors.New("商品不存在")
+		}
+		if item.ProductStatus != 1 {
+			return nil, 0, errors.New("商品已下架")
+		}
+		if item.SkuStatus != 1 {
+			return nil, 0, errors.New("商品规格不可购买")
+		}
+		if item.Quantity <= 0 {
+			return nil, 0, errors.New("购买数量错误")
+		}
+		if item.Stock < item.Quantity {
+			return nil, 0, errors.New("商品库存不足")
+		}
+
+		item.TotalAmount = item.Price * float64(item.Quantity)
+		totalAmount += item.TotalAmount
+		validItems = append(validItems, item)
+	}
+
+	if len(validItems) != len(cartIds) {
+		return nil, 0, errors.New("部分购物车商品不存在")
+	}
+
+	return validItems, totalAmount, nil
+}
+
+func buildOrderItemsFromDirect(skuId uint, quantity int) ([]models.OrderBuyItem, float64, error) {
+	if skuId == 0 {
+		return nil, 0, errors.New("请选择商品规格")
+	}
+	if quantity <= 0 {
+		return nil, 0, errors.New("购买数量错误")
+	}
+
+	item, err := dao.GetDirectOrderItemBySkuId(skuId)
+	if err != nil {
+		return nil, 0, err
+	}
+	if item == nil || item.SkuId == 0 {
+		return nil, 0, errors.New("商品不存在")
+	}
+	if item.ProductStatus != 1 {
+		return nil, 0, errors.New("商品已下架")
+	}
+	if item.SkuStatus != 1 {
+		return nil, 0, errors.New("商品规格不可购买")
+	}
+	if item.Stock < quantity {
+		return nil, 0, errors.New("商品库存不足")
+	}
+
+	item.Quantity = quantity
+	item.TotalAmount = item.Price * float64(quantity)
+
+	return []models.OrderBuyItem{*item}, item.TotalAmount, nil
+}
+func generateOrderNo(userId uint) string {
+	return fmt.Sprintf("ORD%d%d", userId, time.Now().UnixNano())
+}
+func GetOrderList(userId uint, req models.OrderListRequest) (*models.OrderListResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 10
+	}
+	if req.PageSize > 50 {
+		req.PageSize = 50
+	}
+	if !isValidOrderStatusForQuery(req.Status) {
+		return nil, errors.New("订单状态参数错误")
+	}
+	list, err := dao.GetOrderListByUserId(userId, req.Status, req.Page, req.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	total, err := dao.CountOrderListByUserId(userId, req.Status)
+	if err != nil {
+		return nil, err
+	}
+	orderNos := make([]string, 0, len(list))
+	for _, item := range list {
+		orderNos = append(orderNos, item.OrderNo)
+	}
+	items, err := dao.GetOrderItemsByOrderNos(orderNos)
+	if err != nil {
+		return nil, err
+	}
+	itemMap := make(map[string][]models.OrderItemVO)
+	for _, item := range items {
+		itemMap[item.OrderNo] = append(itemMap[item.OrderNo], item)
+	}
+	for i := range list {
+		list[i].StatusText = models.GetOrderStatusText(list[i].Status)
+		list[i].Items = itemMap[list[i].OrderNo]
+	}
+	return &models.OrderListResult{
+		List:     list,
+		Total:    int64(total),
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		Tabs:     models.GetOrderTabs(),
+	}, nil
+}
+func isValidOrderStatusForQuery(status int) bool {
+	switch status {
+	case models.OrderStatusAll,
+		models.OrderStatusCanceled,
+		models.OrderStatusUnpaid,
+		models.OrderStatusPaid,
+		models.OrderStatusShipped,
+		models.OrderStatusFinished:
+		return true
+	default:
+		return false
+	}
+}
+func PreviewOrder(userId uint, req models.OrderPreviewRequest) (*models.OrderPreviewResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+	if req.SourceType != "cart" && req.SourceType != "direct" {
+		return nil, errors.New("下单来源错误")
+	}
+	createReq := models.CreateOrderRequest{
+		SourceType: req.SourceType,
+		CartIds:    req.CartIds,
+		SkuId:      req.SkuId,
+		Quantity:   req.Quantity,
+	}
+	items, totalAmount, err := buildOrderItemsBySource(userId, createReq)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) != len(req.CartIds) {
+		return nil, errors.New("没有可购买的商品")
+	}
+	addressList, err := dao.GetAddressListByUserId(userId)
+	if err != nil {
+		return nil, err
+	}
+	defaultAddress, err := dao.GetDefaultAddressByUserId(userId)
+	if err != nil {
+		return nil, err
+	}
+	previewItems := make([]models.OrderPreviewItemVO, 0, len(addressList))
+	for _, item := range items {
+		previewItems = append(previewItems, models.OrderPreviewItemVO{
+			ProductId:    item.ProductId,
+			SkuId:        item.SkuId,
+			ProductName:  item.ProductName,
+			ProductImage: item.ProductImage,
+			SkuName:      item.SkuName,
+			Price:        item.Price,
+			Quantity:     item.Quantity,
+			Stock:        item.Stock,
+			TotalAmount:  item.TotalAmount,
+		})
+	}
+	freightAmount := 0.0
+	couponAmount := 0.0
+	payAmount := totalAmount + freightAmount - couponAmount
+
+	return &models.OrderPreviewResult{
+		Items:          previewItems,
+		AddressList:    addressList,
+		DefaultAddress: defaultAddress,
+		TotalAmount:    totalAmount,
+		FreightAmount:  freightAmount,
+		CouponAmount:   couponAmount,
+		PayAmount:      payAmount,
+		ItemCount:      len(previewItems),
+	}, nil
+}
+func GetPayPage(userId uint, orderNo string) (*models.PayPageResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+
+	if orderNo == "" {
+		return nil, errors.New("订单号不能为空")
+	}
+
+	order, err := dao.GetOrderByOrderNoAndUserId(userId, orderNo)
+	if err != nil {
+		return nil, err
+	}
+
+	if order == nil || order.Id == 0 {
+		return nil, errors.New("订单不存在")
+	}
+
+	if order.Status == models.OrderStatusCanceled {
+		return nil, errors.New("订单已取消，无法支付")
+	}
+
+	if order.Status != models.OrderStatusUnpaid {
+		return nil, errors.New("当前订单不是待支付状态")
+	}
+
+	items, err := dao.GetOrderItemsByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.PayPageResult{
+		OrderId:    order.Id,
+		OrderNo:    order.OrderNo,
+		PayAmount:  order.PayAmount,
+		Status:     order.Status,
+		StatusText: models.GetOrderStatusText(order.Status),
+		CreatedAt:  order.CreatedAt.Format("2006-01-02 15:04:05"),
+
+		ReceiverName:          order.ReceiverName,
+		ReceiverPhone:         order.ReceiverPhone,
+		ReceiverProvince:      order.ReceiverProvince,
+		ReceiverCity:          order.ReceiverCity,
+		ReceiverDistrict:      order.ReceiverDistrict,
+		ReceiverDetailAddress: order.ReceiverDetailAddress,
+
+		Items: items,
+	}, nil
+}
+func PayOrder(userId uint, req models.PayOrderRequest) (*models.PayOrderResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+
+	if req.OrderNO == "" {
+		return nil, errors.New("订单号不能为空")
+	}
+
+	order, err := dao.GetOrderByOrderNoAndUserId(userId, req.OrderNO)
+	if err != nil {
+		return nil, err
+	}
+
+	if order == nil || order.Id == 0 {
+		return nil, errors.New("订单不存在")
+	}
+
+	if order.Status == models.OrderStatusCanceled {
+		return nil, errors.New("订单已取消，无法支付")
+	}
+
+	if order.Status == models.OrderStatusPaid {
+		return nil, errors.New("订单已支付，请勿重复支付")
+	}
+
+	if order.Status != models.OrderStatusUnpaid {
+		return nil, errors.New("当前订单状态不可支付")
+	}
+
+	tx := util.Db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
+
+	rows, err := dao.UpdateOrderToPaidTx(tx, userId, req.OrderNO)
+	if err != nil {
+		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, errors.New("支付失败，订单状态已变化")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	committed = true
+
+	payTime := time.Now().Format("2006-01-02 15:04:05")
+
+	logger.Log.Info("订单支付成功",
+		zap.Uint("user_id", userId),
+		zap.String("order_no", req.OrderNO),
+		zap.Float64("pay_amount", order.PayAmount),
+	)
+
+	return &models.PayOrderResult{
+		OrderNo:    order.OrderNo,
+		PayAmount:  order.PayAmount,
+		Status:     models.OrderStatusPaid,
+		StatusText: models.GetOrderStatusText(models.OrderStatusPaid),
+		PayTime:    payTime,
+	}, nil
+}

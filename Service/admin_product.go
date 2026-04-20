@@ -10,7 +10,7 @@ func ValidateProductCategory(categoryId int) error { //目前是一个半成品
 	if err != nil {
 		return err
 	}
-	if (category.Id == 0) || (category == nil) {
+	if (category == nil) || (category.Id == 0) {
 		return errors.New("分类不存在")
 	}
 	isLeaf, err := dao.IsLeafCategory(categoryId)

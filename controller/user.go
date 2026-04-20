@@ -100,7 +100,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := util.GenerateToken(user.UserId, user.Username)
+	token, err := util.GenerateToken(user.UserId, user.Username, "user")
 	if err != nil {
 		logger.Log.Error("登录失败：生成 token 失败",
 			zap.Uint("user_id", user.UserId),

@@ -2,6 +2,14 @@ package models
 
 import "time"
 
+const (
+	CartItemStatusNormal             = 1 //正常
+	CartItemStatusProductOffShelf    = 2 //下架
+	CartItemStatusSkuInvalid         = 3 //规格不可用
+	CartItemsStatusSoldOut           = 4 //已售罄
+	CartItemsStatusStockInsufficient = 5 //库存不足
+)
+
 type Cart struct {
 	Id        uint      `json:"id"`
 	UserId    uint      `json:"user_id"`
@@ -39,20 +47,26 @@ type UpdateCartQuantityRequest struct {
 }
 type UpdateCartCheckRequest struct {
 	CartId  uint `json:"cart_id" binding:"required"`
-	Checked int  `json:"checked" binding:"required"`
+	Checked *int `json:"checked" binding:"required"`
 }
 type DeleteCartRequest struct {
 	CartId uint `json:"cart_id" binding:"required"`
 }
 type CartDisplayItem struct {
-	CartId      uint    `json:"cart_id" `
-	SkuId       uint    `json:"sku_id" `
-	ProductId   uint    `json:"product_id" `
-	Title       string  `json:"title" `
-	Image       string  `json:"image" `
-	Price       float64 `json:"price" `
-	Stock       int     `json:"stock" `
-	Quantity    int     `json:"quantity" `
-	Checked     int     `json:"checked" `
-	TotalAmount float64 `json:"total_amount" `
+	CartId         uint    `json:"cart_id" `
+	SkuId          uint    `json:"sku_id" `
+	ProductId      uint    `json:"product_id" `
+	Title          string  `json:"title" `
+	Image          string  `json:"image" `
+	Price          float64 `json:"price" `
+	Stock          int     `json:"stock" `
+	Quantity       int     `json:"quantity" `
+	Checked        int     `json:"checked" `
+	TotalAmount    float64 `json:"total_amount" `
+	SkuName        string  `json:"sku_name" `
+	Invalid        int     `json:"invalid" `         //1=失效，0=有效
+	StatusCode     int     `json:"status_code" `     //购物车状态码
+	StatusTx       string  `json:"status_tx" `       //正常 / 库存不足 / 已下架 / 已售罄
+	CanCheckout    int     `json:"can_checkout" `    // 1=可结算 0=不可结算
+	AvailableStock int     `json:"available_stock" ` //当前可用库存
 }

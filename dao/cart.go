@@ -4,9 +4,47 @@ import (
 	"MYshop/models"
 	"MYshop/package/logger"
 	"MYshop/util"
+	"errors"
 	"go.uber.org/zap"
+	"time"
 )
 
+type CartSkuInfo struct {
+	ID        uint
+	ProductID uint
+	Stock     uint
+}
+
+func GetSkuByProductAndSku(productID uint, skuID uint) (*CartSkuInfo, error) {
+	var sku CartSkuInfo
+
+	sql := `
+		SELECT 
+			id,
+			product_id,
+			stock
+		FROM product_sku
+		WHERE id = ?
+		  AND product_id = ?
+		LIMIT 1
+	`
+
+	err := util.Db.Raw(sql, skuID, productID).Scan(&sku).Error
+	if err != nil {
+		logger.Log.Error("查询SKU库存失败",
+			zap.Error(err),
+			zap.Uint("product_id", productID),
+			zap.Uint("sku_id", skuID),
+		)
+		return nil, err
+	}
+
+	if sku.ID == 0 {
+		return nil, nil
+	}
+
+	return &sku, nil
+}
 func GetSkuById(skuId uint) (*models.ProductSku, error) {
 	var sku models.ProductSku
 	sql := `
@@ -61,27 +99,36 @@ func CreateCart(cart *models.Cart) error {
 		(user_id, product_id, sku_id, quantity, checked, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
 	`
-	err := util.Db.Exec(sql,
+	result := util.Db.Exec(sql,
 		cart.UserId,
 		cart.ProductId,
 		cart.SkuId,
 		cart.Quantity,
-		cart.Checked).Error
-	if err != nil {
-		logger.Log.Error("新增购物车失败", zap.Error(err), zap.Any("cart", cart))
-		return err
+		cart.Checked)
+	if result.Error != nil {
+		logger.Log.Error("新增购物车失败", zap.Error(result.Error), zap.Any("cart", cart))
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("新增购物车失败")
 	}
 	return nil
 }
 
-func UpdateCartQuantity(cartId uint, quantity int) error {
-	sql := `UPDATE cart
-		SET quantity = ?, updated_at = NOW()
-		WHERE id = ?`
-	err := util.Db.Exec(sql, quantity, cartId).Error
-	if err != nil {
-		logger.Log.Error("更新购物车数量失败", zap.Error(err), zap.Uint("cart_id", cartId), zap.Int("quantity", quantity))
-		return err
+func UpdateCartQuantity(userId uint, cartId uint, quantity int) error {
+	sql := `UPDATE cart SET quantity = ?,updated_at=? WHERE id = ? AND user_id = ?`
+	result := util.Db.Exec(sql, quantity, time.Now(), cartId, userId)
+	if result.Error != nil {
+		logger.Log.Error("更新购物车数量失败",
+			zap.Error(result.Error),
+			zap.Uint("user_id", userId),
+			zap.Uint("cart_id", cartId),
+			zap.Int("quantity", quantity),
+		)
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("购物车项不存在或无权限修改")
 	}
 	return nil
 }
@@ -94,7 +141,7 @@ func GetCartListByUserId(userId uint) ([]models.CartItem, error) {
 			c.sku_id,
 			c.quantity,
 			c.checked,
-			p.name AS product_name,
+			p.subtitle AS product_name,
 			p.main_image,
 			p.status AS product_status,
 			s.sku_name,
@@ -111,9 +158,10 @@ func GetCartListByUserId(userId uint) ([]models.CartItem, error) {
 		logger.Log.Error("查询购物车列表失败", zap.Error(err), zap.Uint("user_id", userId))
 		return nil, err
 	}
+	//logger.Log.Debug("<UNK>", zap.Any("list", list))
 	return list, nil
 }
-func GetCartById(cartId, userId uint) (*models.Cart, error) {
+func GetCartById(userId, cartId uint) (*models.Cart, error) {
 	var cart models.Cart
 	sql := `
 		SELECT
@@ -134,6 +182,10 @@ func GetCartById(cartId, userId uint) (*models.Cart, error) {
 		logger.Log.Error("查询购物车详情失败", zap.Error(err), zap.Uint("user_id", userId), zap.Uint("cart_id", cartId))
 		return nil, err
 	}
+	if cart.Id == 0 {
+		return nil, nil
+	}
+	//logger.Log.Debug("", zap.Any("cart", cart))
 	return &cart, nil
 }
 func UpdateCartChecked(cartId uint, checked int) error {
@@ -155,4 +207,36 @@ func DeleteCartById(cartId uint) error {
 		return err
 	}
 	return nil
+}
+func GetCartItemDetailById(userId uint, cartId uint) (*models.CartItem, error) {
+	var item models.CartItem
+	sql := `
+		SELECT
+			c.id AS cart_id,
+			c.product_id,
+			c.sku_id,
+			c.quantity,
+			c.checked,
+			p.name AS product_name,
+			p.main_image,
+			p.status AS product_status,
+			s.sku_name,
+			s.price,
+			s.stock,
+			s.status AS sku_status
+		FROM cart c
+		LEFT JOIN product p ON c.product_id = p.id
+		LEFT JOIN product_sku s ON c.sku_id = s.id
+		WHERE c.user_id = ? AND c.id = ?
+		LIMIT 1
+	`
+	err := util.Db.Raw(sql, userId, cartId).Scan(&item).Error
+	if err != nil {
+		logger.Log.Error("查询购物车商品详情失败", zap.Error(err), zap.Uint("user_id", userId), zap.Uint("cart_id", cartId))
+		return nil, err
+	}
+	if item.CartId == 0 {
+		return nil, nil
+	}
+	return &item, nil
 }

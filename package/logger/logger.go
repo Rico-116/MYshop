@@ -82,3 +82,15 @@ func Init(env string) error {
 func Sync() {
 	_ = Log.Sync()
 }
+
+func InitLogger() error {
+	var err error
+
+	// 开发阶段用 NewDevelopment，日志更清楚
+	Log, err = zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
