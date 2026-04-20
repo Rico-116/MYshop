@@ -129,7 +129,7 @@ func DeleteCart(c *gin.Context) {
 		util.Fail(c, 400, "用户信息异常")
 		return
 	}
-	if err := Service.DeleteCart(uint(userID64), req.CartId); err != nil {
+	if err := Service.DeleteCartItem(uint(userID64), req.CartId); err != nil {
 		logger.Log.Warn("删除购物车失败", zap.Error(err))
 		util.Fail(c, 500, err.Error())
 		return

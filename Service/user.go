@@ -463,7 +463,7 @@ func EmailLogin(req models.EmailLoginRequest) (string, *models.User, error) {
 		return "", nil, errors.New("用户不存在")
 	}
 
-	token, err := util.GenerateToken(user.UserId, user.Username)
+	token, err := util.GenerateToken(user.UserId, user.Username, "user")
 	if err != nil {
 		logger.Log.Error("邮箱验证码登录失败：生成 token 失败",
 			zap.String("email", req.Email),

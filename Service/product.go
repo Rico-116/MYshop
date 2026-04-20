@@ -148,7 +148,7 @@ func GetProductDetailWithCache(ProductID int) (*models.Product, error) {
 
 // GetProductSkuListWithCache 商品SKU列表缓存
 func GetProductSkuListWithCache(productID int) ([]models.ProductSku, error) {
-	key := util.ProductCategoryListKey(productID)
+	key := util.ProductSkuListKey(productID)
 	val, err := util.RDB.Get(util.Ctx, key).Result()
 	if err == nil {
 		var list []models.ProductSku
