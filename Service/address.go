@@ -51,3 +51,57 @@ func SetDefaultAddress(userId uint, id uint) error {
 	}
 	return dao.SetDefaultAddress(id, userId)
 }
+
+func UpdateAddress(userId uint, id uint, req models.UpdateAddressRequest) error {
+	if id == 0 {
+		return errors.New("地址id不能为空")
+	}
+	if strings.TrimSpace(req.ReceiverName) == "" {
+		return errors.New("收货人不能为空")
+	}
+	if strings.TrimSpace(req.ReceiverPhone) == "" {
+		return errors.New("手机号不能为空")
+	}
+	if strings.TrimSpace(req.Province) == "" || strings.TrimSpace(req.City) == "" ||
+		strings.TrimSpace(req.District) == "" || strings.TrimSpace(req.DetailAddress) == "" {
+		return errors.New("收货地址不能为空")
+	}
+	addr, err := dao.GetAddressByIdAndUserId(id, userId)
+	if err != nil {
+		return err
+	}
+	if addr == nil {
+		return errors.New("地址不存在")
+	}
+	if req.IsDefault == 1 {
+		if err := dao.ClearDefaultAddress(userId); err != nil {
+			return err
+		}
+	}
+	updateAddr := &models.UserAddress{
+		Id:            id,
+		UserId:        userId,
+		ReceiverName:  req.ReceiverName,
+		ReceiverPhone: req.ReceiverPhone,
+		Province:      req.Province,
+		City:          req.City,
+		District:      req.District,
+		DetailAddress: req.DetailAddress,
+		IsDefault:     req.IsDefault,
+	}
+	return dao.UpdateAddress(updateAddr)
+}
+
+func DeleteAddress(userId uint, id uint) error {
+	if id == 0 {
+		return errors.New("地址id不能为空")
+	}
+	addr, err := dao.GetAddressByIdAndUserId(id, userId)
+	if err != nil {
+		return err
+	}
+	if addr == nil {
+		return errors.New("地址不存在")
+	}
+	return dao.DeleteAddress(id, userId)
+}

@@ -46,9 +46,11 @@ type UpdateCartQuantityRequest struct {
 	Quantity uint `json:"quantity" binding:"required"`
 }
 type UpdateCartCheckRequest struct {
-	CartId  uint `json:"cart_id" binding:"required"`
-	Checked *int `json:"checked" binding:"required"`
+	CartId  uint   `json:"cart_id"`
+	CartIds []uint `json:"cart_ids"`
+	Checked *int   `json:"checked" binding:"required"`
 }
+
 type DeleteCartRequest struct {
 	CartId uint `json:"cart_id" binding:"required"`
 }

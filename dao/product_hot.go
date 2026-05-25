@@ -22,7 +22,7 @@ func BatchAddProductClickCount(click map[int]int64) error {
 }
 func GetDefaultHotProducts(limit int) ([]models.Product, error) {
 	if limit <= 0 {
-		limit = 8
+		limit = 10
 	}
 
 	sqlStr := `
@@ -48,6 +48,42 @@ func GetDefaultHotProducts(limit int) ([]models.Product, error) {
 
 	var products []models.Product
 	err := util.Db.Raw(sqlStr, limit).Scan(&products).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return products, nil
+}
+
+func GetDefaultHotProductsExclude(limit int, excludeIds []int) ([]models.Product, error) {
+	if limit <= 0 {
+		return []models.Product{}, nil
+	}
+
+	db := util.Db.Table("product").Select(
+		"id",
+		"category_id",
+		"name",
+		"subtitle",
+		"main_image",
+		"status",
+		"description",
+		"created_at",
+		"updated_at",
+		"rating",
+		"rating_count",
+		"click_count",
+		"price",
+	).Where("status = 1")
+
+	if len(excludeIds) > 0 {
+		db = db.Where("id NOT IN ?", excludeIds)
+	}
+
+	var products []models.Product
+	err := db.Order("click_count DESC, rating DESC, rating_count DESC, id ASC").
+		Limit(limit).
+		Scan(&products).Error
 	if err != nil {
 		return nil, err
 	}

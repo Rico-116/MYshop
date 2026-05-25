@@ -56,3 +56,44 @@ func SetDefaultAddress(c *gin.Context) {
 	}
 	util.Success(c, "设置默认地址成功", nil)
 }
+
+func UpdateAddress(c *gin.Context) {
+	userId := c.GetUint("user_id")
+	if userId == 0 {
+		util.Fail(c, 401, "请先登录")
+		return
+	}
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		util.Fail(c, 400, "地址ID错误")
+		return
+	}
+	var req models.UpdateAddressRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := Service.UpdateAddress(userId, uint(id), req); err != nil {
+		util.Fail(c, 400, err.Error())
+		return
+	}
+	util.Success(c, "修改地址成功", nil)
+}
+
+func DeleteAddress(c *gin.Context) {
+	userId := c.GetUint("user_id")
+	if userId == 0 {
+		util.Fail(c, 401, "请先登录")
+		return
+	}
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		util.Fail(c, 400, "地址ID错误")
+		return
+	}
+	if err := Service.DeleteAddress(userId, uint(id)); err != nil {
+		util.Fail(c, 400, err.Error())
+		return
+	}
+	util.Success(c, "删除地址成功", nil)
+}

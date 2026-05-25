@@ -16,4 +16,5 @@ type Product struct {
 	RatingCount int       `json:"rating_count"`
 	ClickCount  int       `json:"click_count"`
 	Price       float64   `json:"price"`
+	Stock       int       `json:"stock" gorm:"->"`
 }

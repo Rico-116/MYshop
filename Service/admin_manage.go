@@ -3,11 +3,13 @@ package Service
 import (
 	"MYshop/dao"
 	"MYshop/models"
+	"MYshop/util"
 	"errors"
 	"strings"
 )
 
-func GetAdminOrderList(status, page, pageSize int) (*models.OrderListResult, error) {
+func GetAdminOrderList(status int, orderNo string, page, pageSize int) (*models.OrderListResult, error) {
+	orderNo = strings.TrimSpace(orderNo)
 	if page <= 0 {
 		page = 1
 	}
@@ -21,7 +23,7 @@ func GetAdminOrderList(status, page, pageSize int) (*models.OrderListResult, err
 		return nil, errors.New("订单状态参数错误")
 	}
 
-	list, total, err := dao.AdminGetOrderList(status, page, pageSize)
+	list, total, err := dao.AdminGetOrderList(status, orderNo, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +120,61 @@ func ShipAdminOrder(req models.AdminShipOrderRequest) (*models.OrderDetailResult
 	if rows == 0 {
 		return nil, errors.New("发货失败，订单状态已变化")
 	}
+	return GetAdminOrderDetail(orderNo)
+}
+
+func CancelAdminOrder(req models.AdminCancelOrderRequest) (*models.OrderDetailResult, error) {
+	orderNo := strings.TrimSpace(req.OrderNo)
+	if orderNo == "" {
+		return nil, errors.New("订单号不能为空")
+	}
+	order, err := dao.AdminGetOrderByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil || order.Id == 0 {
+		return nil, errors.New("订单不存在")
+	}
+	if order.Status == models.OrderStatusCanceled {
+		return nil, errors.New("订单已取消，请勿重复操作")
+	}
+	if order.Status != models.OrderStatusUnpaid && order.Status != models.OrderStatusPaid {
+		return nil, errors.New("只有待支付或待发货订单可以取消")
+	}
+
+	tx := util.Db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
+
+	rows, err := dao.AdminUpdateOrderToCanceledTx(tx, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if rows == 0 {
+		return nil, errors.New("取消失败，订单状态已变化")
+	}
+
+	items, err := dao.GetOrderItemsByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if err := dao.RestoreSkuStockTx(tx, item.SkuId, item.Quantity); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	committed = true
 	return GetAdminOrderDetail(orderNo)
 }
 

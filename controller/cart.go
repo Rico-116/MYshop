@@ -113,17 +113,16 @@ func UpdateCartChecked(c *gin.Context) {
 	}
 	var req models.UpdateCartCheckRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		//logger.Log.Debug("<UNK>", zap.Error(err))
-		//println(err.Error())
+		logger.Log.Debug("<UNK>", zap.Error(err))
+		println(err.Error())
 		util.Fail(c, 400, "参数错误")
 		return
 	}
-	//userID64, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
-	//if err != nil {
-	//	util.Fail(c, 400, "用户信息异常")
-	//	return
-	//}
-	if err := Service.UpdateCartChecked(userId, req.CartId, *req.Checked == 1); err != nil {
+	if req.CartId == 0 && len(req.CartIds) == 0 {
+		util.Fail(c, 400, "参数错误")
+		return
+	}
+	if err := Service.UpdateCartChecked(userId, req.CartId, req.CartIds, *req.Checked == 1); err != nil {
 		logger.Log.Warn("修改购物车勾选状态失败", zap.Error(err))
 		util.Fail(c, 500, err.Error())
 		return

@@ -15,3 +15,15 @@ type AdminUser struct {
 func (AdminUser) TableName() string {
 	return "admin_users"
 }
+
+type AdminUserListRequest struct {
+	Keyword  string `json:"keyword"`
+	Status   *int   `json:"status"`
+	Page     int    `json:"page"`
+	PageSize int    `json:"page_size"`
+}
+
+type AdminUpdateUserStatusRequest struct {
+	UserId uint `json:"user_id" binding:"required"`
+	Status int  `json:"status"`
+}

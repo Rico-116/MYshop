@@ -4,7 +4,9 @@ import (
 	"MYshop/models"
 	"MYshop/package/logger"
 	"MYshop/util"
+	"errors"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func GetCategoryList() ([]models.Category, error) {
@@ -26,6 +28,73 @@ func GetCategoryById(id int) (*models.Category, error) {
 		return nil, err
 	}
 	return &category, nil
+}
+
+func AdminGetCategoryById(id uint) (*models.Category, error) {
+	var category models.Category
+	err := util.Db.Table("category").
+		Select("id", "name", "parent_id", "sort", "icon", "status", "created_at", "updated_at").
+		Where("id = ?", id).
+		Limit(1).
+		Scan(&category).Error
+	if err != nil {
+		return nil, err
+	}
+	if category.Id == 0 {
+		return nil, nil
+	}
+	return &category, nil
+}
+
+func AdminGetCategoryList(status *uint, level int) ([]models.Category, error) {
+	var list []models.Category
+	db := util.Db.Table("category").Select("id", "name", "parent_id", "sort", "icon", "status", "created_at", "updated_at")
+	if status != nil {
+		db = db.Where("status = ?", *status)
+	}
+	if level == 1 {
+		db = db.Where("parent_id = 0")
+	}
+	if level == 2 {
+		db = db.Where("parent_id <> 0")
+	}
+	err := db.Order("sort ASC, id ASC").Scan(&list).Error
+	return list, err
+}
+
+func AdminCreateCategory(category *models.Category) error {
+	return util.Db.Table("category").Create(category).Error
+}
+
+func AdminUpdateCategory(categoryId uint, updates map[string]interface{}) error {
+	result := util.Db.Table("category").Where("id = ?", categoryId).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("分类不存在或没有任何修改")
+	}
+	return nil
+}
+
+func AdminDeleteCategory(categoryId uint) error {
+	result := util.Db.Table("category").Where("id = ?", categoryId).Updates(map[string]interface{}{
+		"status":     0,
+		"updated_at": gorm.Expr("NOW()"),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("分类不存在")
+	}
+	return nil
+}
+
+func AdminCountProductByCategoryId(categoryId uint) (int64, error) {
+	var count int64
+	err := util.Db.Table("product").Where("category_id = ? AND status = 1", categoryId).Count(&count).Error
+	return count, err
 }
 func GetChildCategoryList(parentId int) ([]models.Category, error) {
 	var list []models.Category

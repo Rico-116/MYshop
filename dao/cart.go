@@ -188,13 +188,28 @@ func GetCartById(userId, cartId uint) (*models.Cart, error) {
 	//logger.Log.Debug("", zap.Any("cart", cart))
 	return &cart, nil
 }
-func UpdateCartChecked(cartId uint, checked int) error {
+func UpdateCartChecked(userId uint, cartId uint, checked int) error {
 	sql := `UPDATE cart
 		SET checked = ?, updated_at = NOW()
-		WHERE id = ?`
-	err := util.Db.Exec(sql, checked, cartId).Error
+		WHERE id = ? AND user_id = ?`
+	result := util.Db.Exec(sql, checked, cartId, userId)
+	if result.Error != nil {
+		logger.Log.Error("更新购物车勾选状态失败", zap.Error(result.Error), zap.Uint("cart_id", cartId), zap.Int("checked", checked))
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("购物车项不存在或无权限修改")
+	}
+	return nil
+}
+
+func UpdateCartCheckedBatch(userId uint, cartIds []uint, checked int) error {
+	sql := `UPDATE cart
+		SET checked = ?, updated_at = NOW()
+		WHERE user_id = ? AND id IN ?`
+	err := util.Db.Exec(sql, checked, userId, cartIds).Error
 	if err != nil {
-		logger.Log.Error("更新购物车勾选状态失败", zap.Error(err), zap.Uint("cart_id", cartId), zap.Int("checked", checked))
+		logger.Log.Error("批量更新购物车勾选状态失败", zap.Error(err), zap.Uint("user_id", userId), zap.Any("cart_ids", cartIds), zap.Int("checked", checked))
 		return err
 	}
 	return nil

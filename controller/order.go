@@ -148,3 +148,50 @@ func PayOrder(c *gin.Context) {
 
 	util.Success(c, "支付成功", result)
 }
+
+func GetOrderDetail(c *gin.Context) {
+	userId := c.GetUint("user_id")
+	if userId == 0 {
+		util.Fail(c, 401, "请先登录")
+		return
+	}
+	orderNo := c.Query("order_no")
+	if orderNo == "" {
+		util.Fail(c, 400, "订单号不能为空")
+		return
+	}
+	result, err := Service.GetOrderDetail(userId, orderNo)
+	if err != nil {
+		logger.Log.Warn("获取订单详情失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+			zap.String("order_no", orderNo),
+		)
+		util.Fail(c, 400, err.Error())
+		return
+	}
+	util.Success(c, "获取订单详情成功", result)
+}
+
+func DeleteUserOrder(c *gin.Context) {
+	userId := c.GetUint("user_id")
+	if userId == 0 {
+		util.Fail(c, 401, "请先登录")
+		return
+	}
+	orderNo := c.Query("order_no")
+	if orderNo == "" {
+		util.Fail(c, 400, "订单号不能为空")
+		return
+	}
+	if err := Service.DeleteUserOrder(userId, orderNo); err != nil {
+		logger.Log.Warn("删除订单失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+			zap.String("order_no", orderNo),
+		)
+		util.Fail(c, 400, err.Error())
+		return
+	}
+	util.Success(c, "删除订单成功", nil)
+}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -301,7 +302,7 @@ func PreviewOrder(userId uint, req models.OrderPreviewRequest) (*models.OrderPre
 	if err != nil {
 		return nil, err
 	}
-	if len(items) != len(req.CartIds) {
+	if len(items) == 0 {
 		return nil, errors.New("没有可购买的商品")
 	}
 	addressList, err := dao.GetAddressListByUserId(userId)
@@ -312,7 +313,7 @@ func PreviewOrder(userId uint, req models.OrderPreviewRequest) (*models.OrderPre
 	if err != nil {
 		return nil, err
 	}
-	previewItems := make([]models.OrderPreviewItemVO, 0, len(addressList))
+	previewItems := make([]models.OrderPreviewItemVO, 0, len(items))
 	for _, item := range items {
 		previewItems = append(previewItems, models.OrderPreviewItemVO{
 			ProductId:    item.ProductId,
@@ -461,4 +462,78 @@ func PayOrder(userId uint, req models.PayOrderRequest) (*models.PayOrderResult, 
 		StatusText: models.GetOrderStatusText(models.OrderStatusPaid),
 		PayTime:    payTime,
 	}, nil
+}
+
+func GetOrderDetail(userId uint, orderNo string) (*models.OrderDetailResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+	orderNo = strings.TrimSpace(orderNo)
+	if orderNo == "" {
+		return nil, errors.New("订单号不能为空")
+	}
+	order, err := dao.GetOrderByOrderNoAndUserId(userId, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil || order.Id == 0 {
+		return nil, errors.New("订单不存在")
+	}
+	items, err := dao.GetOrderItemsByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+	return &models.OrderDetailResult{
+		OrderId:               order.Id,
+		OrderNo:               order.OrderNo,
+		UserId:                order.UserId,
+		Status:                order.Status,
+		StatusText:            models.GetOrderStatusText(order.Status),
+		TotalAmount:           order.TotalAmount,
+		PayAmount:             order.PayAmount,
+		FreightAmount:         order.FreightAmount,
+		CouponAmount:          order.CouponAmount,
+		ReceiverName:          order.ReceiverName,
+		ReceiverPhone:         order.ReceiverPhone,
+		ReceiveProvince:       order.ReceiverProvince,
+		ReceiverCity:          order.ReceiverCity,
+		ReceiverDistrict:      order.ReceiverDistrict,
+		ReceiverDetailAddress: order.ReceiverDetailAddress,
+		Remark:                order.Remark,
+		PayTime:               order.PayTime,
+		DeliverTime:           order.DeliveryTime,
+		FinishTime:            order.FinishTime,
+		CloseTime:             order.CloseTime,
+		CreateTime:            order.CreatedAt,
+		UpdateTime:            order.UpdatedAt,
+		Items:                 items,
+	}, nil
+}
+
+func DeleteUserOrder(userId uint, orderNo string) error {
+	if userId == 0 {
+		return errors.New("用户未登录")
+	}
+	orderNo = strings.TrimSpace(orderNo)
+	if orderNo == "" {
+		return errors.New("订单号不能为空")
+	}
+	order, err := dao.GetOrderByOrderNoAndUserId(userId, orderNo)
+	if err != nil {
+		return err
+	}
+	if order == nil || order.Id == 0 {
+		return errors.New("订单不存在")
+	}
+	if order.Status != models.OrderStatusCanceled && order.Status != models.OrderStatusFinished {
+		return errors.New("只有已取消或已完成订单可以删除")
+	}
+	rows, err := dao.UpdateOrderUserDeleted(userId, orderNo)
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("删除失败，订单状态已变化")
+	}
+	return nil
 }

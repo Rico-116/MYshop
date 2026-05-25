@@ -14,10 +14,11 @@ func AdminGetOrderList(c *gin.Context) {
 		util.Fail(c, 400, "订单状态参数错误")
 		return
 	}
+	orderNo := c.Query("order_no")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	result, err := Service.GetAdminOrderList(status, page, pageSize)
+	result, err := Service.GetAdminOrderList(status, orderNo, page, pageSize)
 	if err != nil {
 		util.Fail(c, 400, err.Error())
 		return
@@ -47,6 +48,20 @@ func AdminShipOrder(c *gin.Context) {
 		return
 	}
 	util.Success(c, "发货成功", result)
+}
+
+func AdminCancelOrder(c *gin.Context) {
+	var req models.AdminCancelOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.Fail(c, 400, "参数错误")
+		return
+	}
+	result, err := Service.CancelAdminOrder(req)
+	if err != nil {
+		util.Fail(c, 400, err.Error())
+		return
+	}
+	util.Success(c, "取消订单成功", result)
 }
 
 func AdminGetUserList(c *gin.Context) {

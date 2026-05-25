@@ -117,7 +117,45 @@ func GetCartDisplayList(userID uint) ([]models.CartDisplayItem, error) {
 	SetCartListToCache(cacheKeyUserID, list)
 	return list, nil
 }
-func UpdateCartChecked(userID uint, cartId uint, checked bool) error {
+func UpdateCartChecked(userID uint, cartId uint, cartIds []uint, checked bool) error {
+	if len(cartIds) > 0 {
+		for _, id := range cartIds {
+			if id == 0 {
+				return errors.New("购物车参数错误")
+			}
+			if err := validateCartCanCheck(userID, id, checked); err != nil {
+				return err
+			}
+		}
+		isChecked := 0
+		if checked {
+			isChecked = 1
+		}
+		if err := dao.UpdateCartCheckedBatch(userID, cartIds, isChecked); err != nil {
+			return err
+		}
+		DeleteCartListCache(strconv.Itoa(int(userID)))
+		return nil
+	}
+
+	if cartId == 0 {
+		return errors.New("购物车参数错误")
+	}
+	if err := validateCartCanCheck(userID, cartId, checked); err != nil {
+		return err
+	}
+	isChecked := 0
+	if checked {
+		isChecked = 1
+	}
+	if err := dao.UpdateCartChecked(userID, cartId, isChecked); err != nil {
+		return err
+	}
+	DeleteCartListCache(strconv.Itoa(int(userID)))
+	return nil
+}
+
+func validateCartCanCheck(userID uint, cartId uint, checked bool) error {
 	item, err := dao.GetCartItemDetailById(userID, cartId)
 	if err != nil {
 		return err
@@ -131,15 +169,6 @@ func UpdateCartChecked(userID uint, cartId uint, checked bool) error {
 			return errors.New("当前商品不可勾选" + statusText)
 		}
 	}
-
-	isChecked := 0
-	if checked {
-		isChecked = 1
-	}
-	if err := dao.UpdateCartChecked(cartId, isChecked); err != nil {
-		return err
-	}
-	DeleteCartListCache(strconv.Itoa(int(userID)))
 	return nil
 }
 

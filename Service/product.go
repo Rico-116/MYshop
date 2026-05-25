@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"math/rand"
-	//"strconv"
+	"strconv"
 	"time"
 )
 
@@ -193,10 +193,19 @@ func GetProductListByCategoryWithCache(categoryID int) ([]models.Product, error)
 	return list, nil
 }
 func DeleteProductCache(productID int, categoryID int) {
-	_ = util.RDB.Del(util.Ctx,
+	productIDStr := strconv.Itoa(productID)
+	if err := util.RDB.Del(util.Ctx,
 		util.ProductDetailKey(productID),
 		util.ProductSkuListKey(productID),
 		util.ProductListKey(),
 		util.ProductCategoryListKey(categoryID),
-	).Err()
+	).Err(); err != nil {
+		logger.Log.Warn("删除商品缓存失败", zap.Error(err), zap.Int("product_id", productID), zap.Int("category_id", categoryID))
+	}
+	if err := util.RDB.ZRem(util.Ctx, util.HotProductZetKey, productIDStr).Err(); err != nil {
+		logger.Log.Warn("删除商品热榜缓存失败", zap.Error(err), zap.Int("product_id", productID))
+	}
+	if err := util.RDB.HDel(util.Ctx, util.ProductClickWriteBackHK, productIDStr).Err(); err != nil {
+		logger.Log.Warn("删除商品点击回写缓存失败", zap.Error(err), zap.Int("product_id", productID))
+	}
 }

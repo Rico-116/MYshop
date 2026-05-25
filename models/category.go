@@ -1,14 +1,16 @@
 package models
 
+import "time"
+
 type Category struct {
-	Id       uint   `json:"id"`
-	Name     string `json:"name"`
-	ParentId uint   `json:"parent_id"`
-	Sort     uint   `json:"sort"`
-	Status   uint   `json:"status"`
-	Icon     string `json:"icon"` //分类图标识别
-	CreateAt string `json:"create_at"`
-	UpdateAt string `json:"update_at"`
+	Id        uint      `json:"id"`
+	Name      string    `json:"name"`
+	ParentId  uint      `json:"parent_id"`
+	Sort      uint      `json:"sort"`
+	Status    uint      `json:"status"`
+	Icon      string    `json:"icon"` //分类图标识别
+	CreatedAt time.Time `json:"created_at" gorm:"column:created_at"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"column:updated_at"`
 }
 type CategoryTree struct {
 	Id       uint           `json:"id"`
@@ -25,4 +27,20 @@ type CategoryDisplay struct {
 type CategoryPathItem struct {
 	Id   uint   `json:"id"`
 	Name string `json:"name"`
+}
+
+type AdminCreateCategoryRequest struct {
+	Name     string `json:"name" binding:"required"`
+	ParentId uint   `json:"parent_id"`
+	Sort     uint   `json:"sort"`
+	Icon     string `json:"icon"`
+	Status   *uint  `json:"status"`
+}
+
+type AdminUpdateCategoryRequest struct {
+	Name     *string `json:"name"`
+	ParentId *uint   `json:"parent_id"`
+	Sort     *uint   `json:"sort"`
+	Icon     *string `json:"icon"`
+	Status   *uint   `json:"status"`
 }

@@ -81,11 +81,26 @@ func GetHotProducts(limit int) ([]models.Product, error) {
 			}
 
 			ordered := make([]models.Product, 0, len(productIDs))
+			validIDSet := make(map[int]struct{}, len(products))
 			for _, id := range productIDs {
 				if product, ok := productMap[id]; ok {
 					ordered = append(ordered, product)
+					validIDSet[id] = struct{}{}
 				}
 			}
+
+			if len(ordered) < limit {
+				excludeIDs := make([]int, 0, len(validIDSet))
+				for id := range validIDSet {
+					excludeIDs = append(excludeIDs, id)
+				}
+				fillProducts, err := dao.GetDefaultHotProductsExclude(limit-len(ordered), excludeIDs)
+				if err != nil {
+					return nil, err
+				}
+				ordered = append(ordered, fillProducts...)
+			}
+
 			if len(ordered) > 0 {
 				return ordered, nil
 			}

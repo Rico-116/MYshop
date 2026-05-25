@@ -12,7 +12,6 @@ import (
 	"MYshop/middleware"
 	"MYshop/package/logger"
 	"MYshop/util"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"time"
@@ -43,29 +42,7 @@ func main() {
 	r := gin.Default()
 
 	// 跨域配置：一定要放在所有路由注册之前
-	r.Use(cors.New(cors.Config{
-		AllowAllOrigins: true,
-		AllowMethods: []string{
-			"GET",
-			"POST",
-			"PUT",
-			"DELETE",
-			"OPTIONS",
-		},
-		AllowHeaders: []string{
-			"Origin",
-			"Content-Type",
-			"Accept",
-			"Authorization",
-			"token",
-		},
-		ExposeHeaders: []string{
-			"Content-Length",
-			"Authorization",
-		},
-		AllowCredentials: false,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(corsMiddleware())
 
 	// 启动商品热度定时写回任务
 	Service.StartProductHotWriteBackWorker(5 * time.Minute)
@@ -95,6 +72,7 @@ func main() {
 		indexGroup.GET("/products/category", controller.GetProductListByCategory)
 		indexGroup.GET("/category/display", controller.GetCategoryDisplay)
 		indexGroup.GET("/products/hot", controller.GetHotProductList)
+		indexGroup.GET("/search", controller.SearchProducts)
 	}
 
 	// 需要登录的接口
@@ -112,24 +90,75 @@ func main() {
 		authGroup.POST("/address/add", controller.AddAddress)
 		authGroup.GET("/address/list", controller.GetAddressList)
 		authGroup.PUT("/address/default", controller.SetDefaultAddress)
+		authGroup.PUT("/address/update/:id", controller.UpdateAddress)
+		authGroup.DELETE("/address/delete/:id", controller.DeleteAddress)
 
 		// 订单
 		authGroup.POST("/order/preview", controller.PreviewOrder)
 		authGroup.POST("/order/create", controller.CreateOrder)
 		authGroup.GET("/order/list", controller.GetOrderList)
-		//authGroup.GET("/order/detail", controller.GetOrderDetail)
+		authGroup.GET("/order/detail", controller.GetOrderDetail)
 		authGroup.POST("/order/pay", controller.PayOrder)
-		authGroup.GET("/order/page", controller.GetPayPage)
+		authGroup.GET("/order/pay/page", controller.GetPayPage)
+		authGroup.DELETE("/order/delete", controller.DeleteUserOrder)
 	}
 
 	// 管理员接口
 	adminGroup := r.Group("/api/admin")
 	{
 		adminGroup.POST("/login", controller.AdminLogin)
+		adminAuthGroup := adminGroup.Group("")
+		adminAuthGroup.Use(middleware.AdminJWTAuthMiddleware())
+		{
+			adminAuthGroup.GET("/product/list", controller.AdminGetProductList)
+			adminAuthGroup.POST("/product/add", controller.AdminCreateProduct)
+			adminAuthGroup.PUT("/product/update/:id", controller.AdminUpdateProduct)
+			adminAuthGroup.DELETE("/product/delete/:id", controller.AdminDeleteProduct)
+			adminAuthGroup.POST("/product/sku/add", controller.AdminCreateProductSku)
+			adminAuthGroup.PUT("/product/sku/update/:id", controller.AdminUpdateProductSku)
+			adminAuthGroup.DELETE("/product/sku/delete/:id", controller.AdminDeleteProductSku)
+
+			adminAuthGroup.GET("/order/list", controller.AdminGetOrderList)
+			adminAuthGroup.GET("/order/detail", controller.AdminGetOrderDetail)
+			adminAuthGroup.POST("/order/ship", controller.AdminShipOrder)
+			adminAuthGroup.POST("/order/cancel", controller.AdminCancelOrder)
+
+			adminAuthGroup.GET("/user/list", controller.AdminGetUserList)
+			adminAuthGroup.PUT("/user/status", controller.AdminUpdateUserStatus)
+
+			adminAuthGroup.GET("/category/list", controller.AdminGetCategoryList)
+			adminAuthGroup.POST("/category/add", controller.AdminCreateCategory)
+			adminAuthGroup.PUT("/category/update/:id", controller.AdminUpdateCategory)
+			adminAuthGroup.DELETE("/category/delete/:id", controller.AdminDeleteCategory)
+		}
 	}
 
 	// 启动服务
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("服务启动失败: %v", err)
+	}
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin != "" {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		} else {
+			c.Header("Access-Control-Allow-Origin", "*")
+		}
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin,Content-Type,Content-Length,Accept,Authorization,token,Token,X-Requested-With,X-CSRF-Token,Access-Control-Request-Private-Network")
+		c.Header("Access-Control-Expose-Headers", "Content-Length,Authorization,token")
+		c.Header("Access-Control-Allow-Private-Network", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
 	}
 }

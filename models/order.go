@@ -75,7 +75,7 @@ type OrderListVO struct {
 	CloseTime             *time.Time    `json:"close_time"`
 	CreatedAt             time.Time     `json:"created_at"`
 	UpdatedAt             time.Time     `json:"updated_at"`
-	Items                 []OrderItemVO `json:"items"`
+	Items                 []OrderItemVO `json:"items" gorm:"-"`
 }
 type OrderItemVO struct {
 	OrderNo      string  `json:"order_no"`
@@ -115,6 +115,7 @@ type Order struct {
 	DeliveryTime          *time.Time `json:"delivery_time"`
 	FinishTime            *time.Time `json:"finish_time"`
 	CloseTime             *time.Time `json:"close_time"`
+	UserDeleted           int        `json:"user_deleted"`
 	CreatedAt             time.Time  `json:"created_at"`
 	UpdatedAt             time.Time  `json:"updated_at"`
 }
@@ -198,7 +199,7 @@ type PayPageResult struct {
 	ReceiverCity          string        `json:"receiver_city"`
 	ReceiverDistrict      string        `json:"receiver_district"`
 	ReceiverDetailAddress string        `json:"receiver_detail_address"`
-	Items                 []OrderItemVO `json:"items"`
+	Items                 []OrderItemVO `json:"items" gorm:"-"`
 }
 type OrderPreviewRequest struct {
 	SourceType string `json:"source_type"`
@@ -226,4 +227,48 @@ type OrderPreviewResult struct {
 	CouponAmount   float64              `json:"coupon_amount"`
 	PayAmount      float64              `json:"pay_amount"`
 	ItemCount      int                  `json:"item_count"`
+}
+
+type OrderDetailResult struct {
+	OrderId               uint          `json:"order_id"`
+	OrderNo               string        `json:"order_no"`
+	UserId                uint          `json:"user_id"`
+	Status                int           `json:"status"`
+	StatusText            string        `json:"status_text"`
+	TotalAmount           float64       `json:"total_amount"`
+	PayAmount             float64       `json:"pay_amount"`
+	FreightAmount         float64       `json:"freight_amount"`
+	CouponAmount          float64       `json:"coupon_amount"`
+	ReceiverName          string        `json:"receiver_name"`
+	ReceiverPhone         string        `json:"receiver_phone"`
+	ReceiveProvince       string        `json:"receive_province"`
+	ReceiverCity          string        `json:"receiver_city"`
+	ReceiverDistrict      string        `json:"receiver_district"`
+	ReceiverDetailAddress string        `json:"receiver_detail_address"`
+	Remark                string        `json:"remark"`
+	PayTime               *time.Time    `json:"pay_time"`
+	DeliverTime           *time.Time    `json:"deliver_time"`
+	FinishTime            *time.Time    `json:"finish_time"`
+	CloseTime             *time.Time    `json:"close_time"`
+	CreateTime            time.Time     `json:"create_time"`
+	UpdateTime            time.Time     `json:"update_time"`
+	Items                 []OrderItemVO `json:"items" gorm:"-"`
+}
+
+type CancelOrderRequest struct {
+	OrderNo string `json:"order_no" binding:"required"`
+}
+
+type CancelOrderResult struct {
+	OrderNo    string `json:"order_no"`
+	Status     int    `json:"status"`
+	StatusText string `json:"status_text"`
+}
+
+type AdminShipOrderRequest struct {
+	OrderNo string `json:"order_no" binding:"required"`
+}
+
+type AdminCancelOrderRequest struct {
+	OrderNo string `json:"order_no" binding:"required"`
 }
