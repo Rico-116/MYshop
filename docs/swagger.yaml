@@ -1,0 +1,1860 @@
+basePath: /api
+definitions:
+  controller.AdminLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.AddAddressRequest:
+    properties:
+      city:
+        type: string
+      detail_address:
+        type: string
+      district:
+        type: string
+      is_default:
+        type: integer
+      province:
+        type: string
+      receiver_name:
+        type: string
+      receiver_phone:
+        type: string
+    type: object
+  models.AddCartRequest:
+    properties:
+      quantity:
+        type: integer
+      sku_id:
+        type: integer
+    required:
+    - quantity
+    - sku_id
+    type: object
+  models.AdminCancelOrderRequest:
+    properties:
+      order_no:
+        type: string
+    required:
+    - order_no
+    type: object
+  models.AdminCreateCategoryRequest:
+    properties:
+      icon:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: integer
+      sort:
+        type: integer
+      status:
+        type: integer
+    required:
+    - name
+    type: object
+  models.AdminCreateProductRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        type: string
+      main_image:
+        type: string
+      name:
+        type: string
+      status:
+        type: integer
+      subtitle:
+        type: string
+    required:
+    - category_id
+    - name
+    type: object
+  models.AdminCreateSeckillActivityRequest:
+    properties:
+      end_time:
+        type: string
+      product_id:
+        type: integer
+      seckill_price:
+        type: number
+      sku_id:
+        type: integer
+      start_time:
+        type: string
+      stock:
+        type: integer
+    required:
+    - end_time
+    - product_id
+    - seckill_price
+    - sku_id
+    - start_time
+    - stock
+    type: object
+  models.AdminCreateSkuRequest:
+    properties:
+      image:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: integer
+      sku_code:
+        type: string
+      sku_name:
+        type: string
+      status:
+        type: integer
+      stock:
+        type: integer
+    required:
+    - product_id
+    - sku_code
+    - sku_name
+    type: object
+  models.AdminShipOrderRequest:
+    properties:
+      order_no:
+        type: string
+    required:
+    - order_no
+    type: object
+  models.AdminUpdateCategoryRequest:
+    properties:
+      icon:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: integer
+      sort:
+        type: integer
+      status:
+        type: integer
+    type: object
+  models.AdminUpdateProductRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        type: string
+      main_image:
+        type: string
+      name:
+        type: string
+      status:
+        type: integer
+      subtitle:
+        type: string
+    type: object
+  models.AdminUpdateSeckillActivityRequest:
+    properties:
+      end_time:
+        type: string
+      id:
+        type: integer
+      seckill_price:
+        type: number
+      start_time:
+        type: string
+      status:
+        type: integer
+      stock:
+        type: integer
+    required:
+    - end_time
+    - id
+    - seckill_price
+    - start_time
+    - status
+    - stock
+    type: object
+  models.AdminUpdateSkuRequest:
+    properties:
+      image:
+        type: string
+      price:
+        type: number
+      sku_code:
+        type: string
+      sku_name:
+        type: string
+      status:
+        type: integer
+      stock:
+        type: integer
+    type: object
+  models.AdminUpdateUserStatusRequest:
+    properties:
+      status:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - user_id
+    type: object
+  models.CancelOrderRequest:
+    properties:
+      order_no:
+        type: string
+    required:
+    - order_no
+    type: object
+  models.ConfirmReceiveRequest:
+    properties:
+      order_no:
+        type: string
+    required:
+    - order_no
+    type: object
+  models.CreateOrderRequest:
+    properties:
+      address_id:
+        type: integer
+      cart_ids:
+        description: 购物车下单
+        items:
+          type: integer
+        type: array
+      quantity:
+        type: integer
+      remark:
+        type: string
+      sku_id:
+        description: 直接购买
+        type: integer
+      source_type:
+        description: cart / direct
+        type: string
+    type: object
+  models.CreateProductCommentRequest:
+    properties:
+      content:
+        type: string
+      order_no:
+        type: string
+      parent_id:
+        type: integer
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      sku_id:
+        type: integer
+    required:
+    - content
+    - product_id
+    type: object
+  models.DeleteCartRequest:
+    properties:
+      cart_id:
+        type: integer
+    required:
+    - cart_id
+    type: object
+  models.EmailLoginRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    required:
+    - code
+    - email
+    type: object
+  models.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.OrderPreviewRequest:
+    properties:
+      cart_ids:
+        items:
+          type: integer
+        type: array
+      quantity:
+        type: integer
+      sku_id:
+        type: integer
+      source_type:
+        type: string
+    type: object
+  models.PayOrderRequest:
+    properties:
+      order_no:
+        type: string
+    type: object
+  models.RegisterRequest:
+    properties:
+      avatar:
+        type: string
+      code:
+        type: string
+      confirm:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      nickname:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      username:
+        type: string
+    type: object
+  models.ResetPasswordRequest:
+    properties:
+      code:
+        type: string
+      confirm_password:
+        type: string
+      email:
+        type: string
+      new_password:
+        type: string
+    type: object
+  models.SeckillSubmitRequest:
+    properties:
+      activity_id:
+        type: string
+      address_id:
+        type: string
+    required:
+    - activity_id
+    - address_id
+    type: object
+  models.SendLoginCodeRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  models.SendRegisterCodeRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  models.SendResetPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  models.UpdateAddressRequest:
+    properties:
+      city:
+        type: string
+      detail_address:
+        type: string
+      district:
+        type: string
+      id:
+        type: integer
+      is_default:
+        type: integer
+      province:
+        type: string
+      receiver_name:
+        type: string
+      receiver_phone:
+        type: string
+    type: object
+  models.UpdateCartCheckRequest:
+    properties:
+      cart_id:
+        type: integer
+      cart_ids:
+        items:
+          type: integer
+        type: array
+      checked:
+        type: integer
+    required:
+    - checked
+    type: object
+  models.UpdateCartQuantityRequest:
+    properties:
+      cart_id:
+        type: integer
+      quantity:
+        type: integer
+    required:
+    - cart_id
+    - quantity
+    type: object
+  models.UpdateUserProfileRequest:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      nickname:
+        type: string
+    type: object
+  util.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 基于 Go + Gin + MySQL + Redis + RabbitMQ 的商城项目接口文档
+  title: MYshop 商城系统接口文档
+  version: "1.0"
+paths:
+  /admin/category/add:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 分类信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminCreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端新增分类
+      tags:
+      - 管理员-分类
+  /admin/category/delete/{id}:
+    delete:
+      parameters:
+      - description: 分类ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端删除分类
+      tags:
+      - 管理员-分类
+  /admin/category/list:
+    get:
+      parameters:
+      - description: 分类状态
+        in: query
+        name: status
+        type: integer
+      - description: 分类层级
+        in: query
+        name: level
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端分类列表
+      tags:
+      - 管理员-分类
+  /admin/category/update/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 分类ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 分类信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminUpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端修改分类
+      tags:
+      - 管理员-分类
+  /admin/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 管理员登录信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/controller.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 管理员登录
+      tags:
+      - 管理员
+  /admin/order/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 取消订单信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminCancelOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端取消订单
+      tags:
+      - 管理员-订单
+  /admin/order/detail:
+    get:
+      parameters:
+      - description: 订单号
+        in: query
+        name: order_no
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端订单详情
+      tags:
+      - 管理员-订单
+  /admin/order/list:
+    get:
+      parameters:
+      - default: -1
+        description: 订单状态，-1表示全部
+        in: query
+        name: status
+        type: integer
+      - description: 订单号
+        in: query
+        name: order_no
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端订单列表
+      tags:
+      - 管理员-订单
+  /admin/order/ship:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 发货信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminShipOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端订单发货
+      tags:
+      - 管理员-订单
+  /admin/product/add:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 商品信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminCreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端新增商品
+      tags:
+      - 管理员-商品
+  /admin/product/delete/{id}:
+    delete:
+      parameters:
+      - description: 商品ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端删除商品
+      tags:
+      - 管理员-商品
+  /admin/product/list:
+    get:
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 分类ID
+        in: query
+        name: category_id
+        type: integer
+      - description: 状态
+        in: query
+        name: status
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端商品列表
+      tags:
+      - 管理员-商品
+  /admin/product/sku/add:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SKU信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminCreateSkuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端新增商品SKU
+      tags:
+      - 管理员-商品
+  /admin/product/sku/delete/{id}:
+    delete:
+      parameters:
+      - description: SKU ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端删除商品SKU
+      tags:
+      - 管理员-商品
+  /admin/product/sku/update/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: SKU ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: SKU信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminUpdateSkuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端修改商品SKU
+      tags:
+      - 管理员-商品
+  /admin/product/update/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 商品ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 商品信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminUpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端修改商品
+      tags:
+      - 管理员-商品
+  /admin/seckill/close:
+    post:
+      parameters:
+      - description: 秒杀活动ID
+        in: query
+        name: activity_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端关闭秒杀活动
+      tags:
+      - 管理员-秒杀
+  /admin/seckill/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 秒杀活动信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminCreateSeckillActivityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端创建秒杀活动
+      tags:
+      - 管理员-秒杀
+  /admin/seckill/init:
+    post:
+      parameters:
+      - description: 秒杀活动ID
+        in: query
+        name: activity_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端初始化秒杀库存
+      tags:
+      - 管理员-秒杀
+  /admin/seckill/list:
+    get:
+      parameters:
+      - default: -1
+        description: 活动状态，-1表示全部
+        in: query
+        name: status
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端秒杀活动列表
+      tags:
+      - 管理员-秒杀
+  /admin/seckill/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 秒杀活动信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminUpdateSeckillActivityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端修改秒杀活动
+      tags:
+      - 管理员-秒杀
+  /admin/user/list:
+    get:
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 用户状态
+        in: query
+        name: status
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端用户列表
+      tags:
+      - 管理员-用户
+  /admin/user/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户状态信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminUpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 管理端修改用户状态
+      tags:
+      - 管理员-用户
+  /auth/address/add:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 地址信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 新增收货地址
+      tags:
+      - 地址
+  /auth/address/default:
+    put:
+      parameters:
+      - description: 地址ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置默认地址
+      tags:
+      - 地址
+  /auth/address/delete/{id}:
+    delete:
+      parameters:
+      - description: 地址ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除收货地址
+      tags:
+      - 地址
+  /auth/address/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取收货地址列表
+      tags:
+      - 地址
+  /auth/address/update/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 地址ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 地址信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改收货地址
+      tags:
+      - 地址
+  /auth/cart/add:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 购物车信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 加入购物车
+      tags:
+      - 购物车
+  /auth/cart/check:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 选中状态
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateCartCheckRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改购物车选中状态
+      tags:
+      - 购物车
+  /auth/cart/delete:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: 购物车项信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DeleteCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除购物车商品
+      tags:
+      - 购物车
+  /auth/cart/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取购物车列表
+      tags:
+      - 购物车
+  /auth/cart/quantity:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 数量信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateCartQuantityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改购物车数量
+      tags:
+      - 购物车
+  /auth/order/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 取消订单信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.CancelOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 取消订单
+      tags:
+      - 订单
+  /auth/order/confirm:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 确认收货信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.ConfirmReceiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 确认收货
+      tags:
+      - 订单
+  /auth/order/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建订单信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建订单
+      tags:
+      - 订单
+  /auth/order/delete:
+    delete:
+      parameters:
+      - description: 订单号
+        in: query
+        name: order_no
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除订单
+      tags:
+      - 订单
+  /auth/order/detail:
+    get:
+      parameters:
+      - description: 订单号
+        in: query
+        name: order_no
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取订单详情
+      tags:
+      - 订单
+  /auth/order/list:
+    get:
+      parameters:
+      - default: -1
+        description: 订单状态，-1表示全部
+        in: query
+        name: status
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取订单列表
+      tags:
+      - 订单
+  /auth/order/pay:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 支付信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.PayOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 支付订单
+      tags:
+      - 订单
+  /auth/order/pay/page:
+    get:
+      parameters:
+      - description: 订单号
+        in: query
+        name: order_no
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取支付页
+      tags:
+      - 订单
+  /auth/order/preview:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 订单预览信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.OrderPreviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 预览订单
+      tags:
+      - 订单
+  /auth/product/comment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 评论信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateProductCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建商品评论
+      tags:
+      - 评论
+  /auth/seckill/result:
+    get:
+      parameters:
+      - description: 秒杀活动ID
+        in: query
+        name: activity_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询秒杀结果
+      tags:
+      - 秒杀
+  /auth/seckill/submit:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 秒杀信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.SeckillSubmitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 提交秒杀
+      tags:
+      - 秒杀
+  /auth/user/display/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户资料
+      tags:
+      - 用户资料
+  /auth/user/profile:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户资料
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改用户资料
+      tags:
+      - 用户资料
+  /index/banners:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取首页轮播图
+      tags:
+      - 首页
+  /index/categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取分类树
+      tags:
+      - 首页
+  /index/category/display:
+    get:
+      parameters:
+      - description: 分类ID
+        in: query
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取分类展示
+      tags:
+      - 首页
+  /index/product/comments:
+    get:
+      parameters:
+      - description: 商品ID
+        in: query
+        name: product_id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取商品评论树
+      tags:
+      - 首页
+  /index/product/detail:
+    get:
+      parameters:
+      - description: 商品ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取商品详情
+      tags:
+      - 首页
+  /index/products:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取商品列表
+      tags:
+      - 首页
+  /index/products/category:
+    get:
+      parameters:
+      - description: 分类ID
+        in: query
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 按分类获取商品列表
+      tags:
+      - 首页
+  /index/products/hot:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取热门商品
+      tags:
+      - 首页
+  /index/search:
+    get:
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 分类ID
+        in: query
+        name: category_id
+        type: integer
+      - description: 最低价格
+        in: query
+        name: min_price
+        type: number
+      - description: 最高价格
+        in: query
+        name: max_price
+        type: number
+      - description: 排序方式
+        in: query
+        name: sort
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 搜索商品
+      tags:
+      - 首页
+  /index/seckill/list:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 获取用户端秒杀活动列表
+      tags:
+      - 秒杀
+  /user/email_login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 邮箱登录信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmailLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 邮箱验证码登录
+      tags:
+      - 用户
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 登录信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 用户账号密码登录
+      tags:
+      - 用户
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 注册信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 用户注册
+      tags:
+      - 用户
+  /user/reset_password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 重置密码信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 重置密码
+      tags:
+      - 用户
+  /user/send_code:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 邮箱信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendRegisterCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 发送注册验证码
+      tags:
+      - 用户
+  /user/send_login_code:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 邮箱信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendLoginCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 发送邮箱登录验证码
+      tags:
+      - 用户
+  /user/send_reset_password_code:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 邮箱信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 发送重置密码验证码
+      tags:
+      - 用户
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: 请输入 Bearer token，例如：Bearer eyJhbGciOiJIUzI1NiIs...
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

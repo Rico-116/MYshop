@@ -1,0 +1,269 @@
+{
+  "metrics": {
+    "http_req_duration{expected_response:true}": {
+      "contains": "time",
+      "values": {
+        "p(99)": 4570.724714999998,
+        "max": 7041.2043,
+        "avg": 1211.0830548946794,
+        "min": 18.1394,
+        "med": 1090.72105,
+        "p(90)": 2642.0331600000004,
+        "p(95)": 3102.2222899999997
+      },
+      "type": "trend"
+    },
+    "vus_max": {
+      "values": {
+        "value": 200,
+        "min": 200,
+        "max": 200
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "myshop_api_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.015045135406218655,
+        "passes": 150,
+        "fails": 9820
+      },
+      "thresholds": {
+        "rate<0.05": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 18.1394,
+        "med": 1090.38225,
+        "p(90)": 2641.3820100000003,
+        "p(95)": 3101.88699,
+        "p(99)": 4570.416667999998,
+        "max": 7041.2043,
+        "avg": 1210.8409444533547
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0,
+        "med": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 67.3518,
+        "max": 105.1055,
+        "avg": 1.393206318956872
+      }
+    },
+    "http_req_sending": {
+      "values": {
+        "p(95)": 0.5650299999999996,
+        "p(99)": 0.9759619999999999,
+        "max": 19.8549,
+        "avg": 0.05384899699097293,
+        "min": 0,
+        "med": 0,
+        "p(90)": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 16196000,
+        "rate": 265396.54396019113
+      }
+    },
+    "vus": {
+      "contains": "default",
+      "values": {
+        "value": 13,
+        "min": 13,
+        "max": 200
+      },
+      "type": "gauge"
+    },
+    "http_req_failed": {
+      "thresholds": {
+        "rate<0.05": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 9970
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 7041.2043,
+        "avg": 1211.0830548946794,
+        "min": 18.1394,
+        "med": 1090.72105,
+        "p(90)": 2642.0331600000004,
+        "p(95)": 3102.2222899999997,
+        "p(99)": 4570.724714999998
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 9970,
+        "rate": 163.37389128692922
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 1246250,
+        "rate": 20421.736410866153
+      }
+    },
+    "http_req_receiving": {
+      "contains": "time",
+      "values": {
+        "p(95)": 0.7517699999999989,
+        "p(99)": 1.2219389999999966,
+        "max": 18.7542,
+        "avg": 0.18826144433299907,
+        "min": 0,
+        "med": 0,
+        "p(90)": 0.6331
+      },
+      "type": "trend"
+    },
+    "myshop_business_failed": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 150,
+        "rate": 2.4579823162526964
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "p(99)": 0,
+        "max": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "p(90)": 0
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 19790,
+        "fails": 150,
+        "rate": 0.9924774322968907
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1213.2011002607899,
+        "min": 18.7304,
+        "med": 1091.6051499999999,
+        "p(90)": 2644.2146300000004,
+        "p(95)": 3103.6129349999987,
+        "p(99)": 4581.487755999999,
+        "max": 7041.8311
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 47.9649,
+        "avg": 0.2811506820461382,
+        "min": 0,
+        "med": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 11.610567999999764
+      }
+    },
+    "myshop_endpoint_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 3102.2222899999997,
+        "p(99)": 4570.724714999998,
+        "max": 7041.2043,
+        "avg": 1211.0830548946794,
+        "min": 18.1394,
+        "med": 1090.72105,
+        "p(90)": 2642.0331600000004
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 9970,
+        "rate": 163.37389128692922
+      }
+    }
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [],
+    "checks": [
+        {
+          "name": "product detail: HTTP 200",
+          "path": "::product detail: HTTP 200",
+          "id": "9c9c6b354be93bff20d3fad58e1e3499",
+          "passes": 9970,
+          "fails": 0
+        },
+        {
+          "path": "::product detail: business code 200",
+          "id": "3197ba724e331e98f5d9617cbdc79ea8",
+          "passes": 9820,
+          "fails": 150,
+          "name": "product detail: business code 200"
+        }
+      ]
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "p(90)",
+      "p(95)",
+      "p(99)",
+      "max"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "testRunDurationMs": 61025.6628,
+    "isStdOutTTY": false,
+    "isStdErrTTY": true
+  }
+}
