@@ -180,7 +180,6 @@ func UpdateCartQuantity(userID uint, cartId uint, quantity int) error {
 	if err != nil {
 		return err
 	}
-	//logger.Log.Debug("<UNK>", zap.Any("cart", cart), zap.Uint("cart_Id:", cart.Id))
 	if cart == nil || cart.Id == 0 {
 		return errors.New("购物车记录不存在")
 	}

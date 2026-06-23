@@ -12,11 +12,11 @@ import (
 func GetCategoryTree(c *gin.Context) {
 	list, err := Service.GetCategoryTree()
 	if err != nil {
-		logger.Log.Warn("获取分类树失败")
+		logger.Log.Warn("获取分类树失败", zap.Error(err))
 		util.Fail(c, 500, "获取分类树失败")
 		return
 	}
-	logger.Log.Info("获取分类成功", zap.Any("list", list))
+	logger.Log.Info("获取分类成功", zap.Int("count", len(list)))
 	util.Success(c, "获取分类成功", gin.H{"list": list})
 }
 func GetCategoryDisplay(c *gin.Context) {

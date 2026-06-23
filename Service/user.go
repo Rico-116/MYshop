@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -368,7 +369,6 @@ func Register(req models.RegisterRequest) error {
 	}
 	err = dao.CreateUser(user)
 	if err != nil {
-		//println(err.Error())
 		logger.Log.Warn("注册失败",
 			zap.Error(err))
 		return errors.New("注册失败")
@@ -601,4 +601,118 @@ func ResetPassword(req models.ResetPasswordRequest) error {
 		zap.Error(err),
 	)
 	return nil
+}
+
+func parseGender(gender string) (int, error) {
+	switch gender {
+	case "", "未知", "保密":
+		return 0, nil
+	case "男":
+		return 1, nil
+	case "女":
+		return 2, nil
+	default:
+		return 0, errors.New("性别只能是男、女或未知或保密")
+	}
+}
+
+func GetUserProfile(userId uint) (*models.UserProfileResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+
+	user, err := dao.GetUserById(userId)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || user.UserId == 0 {
+		return nil, errors.New("用户不存在")
+	}
+	if user.Status != 1 {
+		return nil, errors.New("账号状态异常")
+	}
+
+	return &models.UserProfileResult{
+		UserId:   user.UserId,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Email:    user.Email,
+		Avatar:   user.Avatar,
+		Gender:   user.Gender,
+		Status:   user.Status,
+	}, nil
+}
+
+func UpdateUserProfile(userId uint, req models.UpdateUserProfileRequest) (*models.UserProfileResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+
+	req.Nickname = strings.TrimSpace(req.Nickname)
+	req.Avatar = strings.TrimSpace(req.Avatar)
+	req.Email = strings.TrimSpace(req.Email)
+	req.Gender = strings.TrimSpace(req.Gender)
+
+	if req.Nickname == "" {
+		return nil, errors.New("昵称不能为空")
+	}
+	if len([]rune(req.Nickname)) > 30 {
+		return nil, errors.New("昵称不能超过30个字符")
+	}
+	if req.Email == "" {
+		return nil, errors.New("邮箱不能为空")
+	}
+	if !isValidEmail(req.Email) {
+		return nil, errors.New("邮箱格式不正确")
+	}
+	if len(req.Avatar) > 500 {
+		return nil, errors.New("头像地址过长")
+	}
+	genderCode, err := parseGender(req.Gender)
+	if err != nil {
+		return nil, err
+	}
+	req.GenderCode = genderCode
+
+	user, err := dao.GetUserById(userId)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || user.UserId == 0 {
+		return nil, errors.New("用户不存在")
+	}
+	if user.Status != 1 {
+		return nil, errors.New("账号状态异常")
+	}
+	if req.Email != user.Email {
+		existUser, err := dao.GetByEmail(req.Email)
+		if err != nil {
+			return nil, err
+		}
+		if existUser != nil && existUser.UserId != userId {
+			return nil, errors.New("该邮箱已被占用")
+		}
+	}
+
+	if err := dao.UpdateUserProfile(userId, req); err != nil {
+		return nil, err
+	}
+
+	user, err = dao.GetUserById(userId)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || user.UserId == 0 {
+		return nil, errors.New("用户不存在")
+	}
+
+	return &models.UserProfileResult{
+		UserId:   user.UserId,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Email:    user.Email,
+		Avatar:   user.Avatar,
+		Gender:   user.Gender,
+		Status:   user.Status,
+	}, nil
 }

@@ -75,6 +75,8 @@ type OrderListVO struct {
 	CloseTime             *time.Time    `json:"close_time"`
 	CreatedAt             time.Time     `json:"created_at"`
 	UpdatedAt             time.Time     `json:"updated_at"`
+	IsSeckill             bool          `json:"is_seckill"`
+	SeckillActivityId     uint          `json:"seckill_activity_id,omitempty"`
 	Items                 []OrderItemVO `json:"items" gorm:"-"`
 }
 type OrderItemVO struct {
@@ -252,6 +254,8 @@ type OrderDetailResult struct {
 	CloseTime             *time.Time    `json:"close_time"`
 	CreateTime            time.Time     `json:"create_time"`
 	UpdateTime            time.Time     `json:"update_time"`
+	IsSeckill             bool          `json:"is_seckill"`
+	SeckillActivityId     uint          `json:"seckill_activity_id,omitempty"`
 	Items                 []OrderItemVO `json:"items" gorm:"-"`
 }
 
@@ -260,6 +264,16 @@ type CancelOrderRequest struct {
 }
 
 type CancelOrderResult struct {
+	OrderNo    string `json:"order_no"`
+	Status     int    `json:"status"`
+	StatusText string `json:"status_text"`
+}
+
+type ConfirmReceiveRequest struct {
+	OrderNo string `json:"order_no" binding:"required"`
+}
+
+type ConfirmReceiveResult struct {
 	OrderNo    string `json:"order_no"`
 	Status     int    `json:"status"`
 	StatusText string `json:"status_text"`

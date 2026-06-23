@@ -2,7 +2,6 @@ package controller
 
 import (
 	"MYshop/Service"
-	"MYshop/dao"
 	"MYshop/package/logger"
 	"MYshop/util"
 	"github.com/gin-gonic/gin"
@@ -17,7 +16,7 @@ func GetProductList(c *gin.Context) {
 		util.Fail(c, 500, "获取商品列表失败")
 		return
 	}
-	logger.Log.Info("获取商品列表成功", zap.Any("list", list))
+	logger.Log.Info("获取商品列表成功", zap.Int("count", len(list)))
 	util.Success(c, "获取商品列表成功", gin.H{"list": list})
 
 }
@@ -36,7 +35,7 @@ func GetProductDetail(c *gin.Context) {
 		return
 	}
 	if product == nil || product.Id == 0 {
-		logger.Log.Warn("商品不存在", zap.Any("product", product))
+		logger.Log.Warn("商品不存在", zap.Uint64("product_id", id64))
 		util.Fail(c, 404, "商品不存在")
 		return
 	}
@@ -65,10 +64,16 @@ func GetProductDetail(c *gin.Context) {
 	if err = Service.RecordProductView(int(id64), identity); err != nil {
 		logger.Log.Warn("记录商品热度失败", zap.Error(err), zap.Uint64("product_id", id64))
 	}
-	Category, err := dao.GetSkuCategoryById(product.CategoryId)
+	Category, err := Service.GetCategoryDetailWithCache(product.CategoryId)
 	if err != nil {
-		logger.Log.Warn("获取商品类别失败", zap.Error(err))
+		logger.Log.Warn("获取商品类别失败", zap.Error(err), zap.Uint("category_id", product.CategoryId))
 		util.Fail(c, 500, "获取商品类别失败，请稍后再试")
+		return
+	}
+	if Category == nil || Category.Id == 0 {
+		logger.Log.Warn("商品类别不存在", zap.Uint("category_id", product.CategoryId))
+		util.Fail(c, 404, "商品类别不存在")
+		return
 	}
 	util.Success(c, "获取商品详情成功", gin.H{
 		"detail":         product,
@@ -97,9 +102,7 @@ func GetProductListByCategory(c *gin.Context) {
 	})
 }
 func GetHotProductList(c *gin.Context) {
-	//logger.Log.Info("limit",zap.Any("limit", c.Request.URL.Query().Get("limit")))
 	limitStr := "10"
-	//logger.Log.Info("<UNK>", zap.Any("limit", limitStr))
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 
@@ -111,7 +114,7 @@ func GetHotProductList(c *gin.Context) {
 		util.Fail(c, 500, "获取热门推荐失败")
 		return
 	}
-	//logger.Log.Info("<UNK>", zap.Any("list", list))
+	logger.Log.Info("获取热门推荐成功", zap.Int("count", len(list)), zap.Int("limit", limit))
 	util.Success(c, "获取热门推荐成功", gin.H{
 		"list": list,
 	})

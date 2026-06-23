@@ -72,6 +72,39 @@ func UpdatePassword(email string, password string) error {
 	return util.Db.Exec(sql, password, email).Error
 }
 
+func GetUserById(userId uint) (*models.User, error) {
+	var user models.User
+	err := util.Db.Table("user").
+		Select("id", "username", "nickname", "phone", "email", "avatar", "gender", "status", "created_at", "updated_at").
+		Where("id = ?", userId).
+		Limit(1).
+		Scan(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	if user.UserId == 0 {
+		return nil, nil
+	}
+	return &user, nil
+}
+
+func UpdateUserProfile(userId uint, req models.UpdateUserProfileRequest) error {
+	result := util.Db.Table("user").Where("id = ?", userId).Updates(map[string]interface{}{
+		"nickname":   req.Nickname,
+		"avatar":     req.Avatar,
+		"email":      req.Email,
+		"gender":     req.GenderCode,
+		"updated_at": gorm.Expr("NOW()"),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("用户不存在或资料没有变化")
+	}
+	return nil
+}
+
 func AdminGetUserById(userId uint) (*models.User, error) {
 	var user models.User
 	err := util.Db.Table("user").Where("id = ?", userId).Limit(1).Scan(&user).Error
@@ -95,6 +128,7 @@ func AdminGetUserList(keyword string, status *int, page, pageSize int) ([]models
 		"phone",
 		"email",
 		"avatar",
+		"gender",
 		"status",
 		"created_at",
 		"updated_at",

@@ -1,11 +1,14 @@
 package util
 
 import (
+	"MYshop/config"
+	"MYshop/package/logger"
 	//"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
+	"time"
 )
 
 var (
@@ -13,10 +16,37 @@ var (
 	err error
 )
 
-func init() {
-	Db, err = gorm.Open(mysql.Open("root:123456@tcp(192.168.0.147:3306)/shop?charset=utf8mb4&parseTime=True&loc=Local"))
+func InitMySQL() error {
+	Db, err = gorm.Open(mysql.Open(config.AppConfig.MySQL.DSN))
 	if err != nil {
-		log.Fatalf("mysql 连接失败：%v", err)
+		return err
 	}
-	log.Println("sql连接成功")
+	sqlDB, err := Db.DB()
+	if err != nil {
+		return err
+	}
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxIdleConns(20)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
+
+	logger.Log.Info("mysql connected",
+		zap.Int("max_open_conns", 100),
+		zap.Int("max_idle_conns", 20),
+	)
+	return nil
+}
+
+func CloseMySQL() {
+	if Db == nil {
+		return
+	}
+	sqlDB, err := Db.DB()
+	if err != nil {
+		logger.Log.Warn("mysql raw db get failed", zap.Error(err))
+		return
+	}
+	if err := sqlDB.Close(); err != nil {
+		logger.Log.Warn("mysql close failed", zap.Error(err))
+	}
 }

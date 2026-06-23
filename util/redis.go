@@ -2,9 +2,10 @@ package util
 
 import (
 	"MYshop/config"
+	"MYshop/package/logger"
 	"context"
-	"fmt"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 	Ctx = context.Background()
 )
 
-func init() {
+func InitRedis() error {
 	RDB = redis.NewClient(&redis.Options{
 		Addr:     config.AppConfig.Redis.Addr,
 		Password: config.AppConfig.Redis.Password,
@@ -20,7 +21,21 @@ func init() {
 	})
 	res, err := RDB.Ping(Ctx).Result()
 	if err != nil {
-		panic(err)
+		return err
 	}
-	fmt.Println("连接成功：", res)
+	logger.Log.Info("redis connected",
+		zap.String("addr", config.AppConfig.Redis.Addr),
+		zap.Int("db", config.AppConfig.Redis.DB),
+		zap.String("ping", res),
+	)
+	return nil
+}
+
+func CloseRedis() {
+	if RDB == nil {
+		return
+	}
+	if err := RDB.Close(); err != nil {
+		logger.Log.Warn("redis close failed", zap.Error(err))
+	}
 }

@@ -12,7 +12,11 @@ import (
 func AdminCreateProduct(product *models.Product) error {
 	err := util.Db.Table("product").Create(product).Error
 	if err != nil {
-		logger.Log.Error("管理员新增商品失败", zap.Error(err), zap.Any("product", product))
+		logger.Log.Error("管理员新增商品失败",
+			zap.Error(err),
+			zap.Uint("category_id", product.CategoryId),
+			zap.String("name", product.Name),
+		)
 		return err
 	}
 	return nil
@@ -83,7 +87,7 @@ func AdminUpdateProduct(productId uint, updates map[string]interface{}) error {
 		logger.Log.Error("管理员修改商品失败",
 			zap.Error(result.Error),
 			zap.Uint("product_id", productId),
-			zap.Any("updates", updates),
+			zap.Int("field_count", len(updates)),
 		)
 		return result.Error
 	}
@@ -118,7 +122,11 @@ func AdminDeleteProduct(productId uint) error {
 func AdminCreateProductSku(productSku *models.ProductSku) error {
 	err := util.Db.Table("product_sku").Create(productSku).Error
 	if err != nil {
-		logger.Log.Error("新增商品SKU失败", zap.Error(err), zap.Any("sku", productSku))
+		logger.Log.Error("新增商品SKU失败",
+			zap.Error(err),
+			zap.Uint("product_id", productSku.ProductId),
+			zap.String("sku_code", productSku.SkuCode),
+		)
 		return err
 	}
 	return nil
@@ -192,7 +200,11 @@ func AdminGetSkuListByProductId(productId uint) ([]models.ProductSku, error) {
 func AdminUpdateSku(skuId uint, updates map[string]interface{}) error {
 	result := util.Db.Table("product_sku").Where("id = ?", skuId).Updates(updates)
 	if result.Error != nil {
-		logger.Log.Error("管理员修改SKU失败", zap.Error(result.Error), zap.Uint("sku_id", skuId), zap.Any("updates", updates))
+		logger.Log.Error("管理员修改SKU失败",
+			zap.Error(result.Error),
+			zap.Uint("sku_id", skuId),
+			zap.Int("field_count", len(updates)),
+		)
 		return result.Error
 	}
 	if result.RowsAffected == 0 {

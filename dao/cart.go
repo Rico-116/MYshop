@@ -106,7 +106,13 @@ func CreateCart(cart *models.Cart) error {
 		cart.Quantity,
 		cart.Checked)
 	if result.Error != nil {
-		logger.Log.Error("新增购物车失败", zap.Error(result.Error), zap.Any("cart", cart))
+		logger.Log.Error("新增购物车失败",
+			zap.Error(result.Error),
+			zap.Uint("user_id", cart.UserId),
+			zap.Uint("product_id", cart.ProductId),
+			zap.Uint("sku_id", cart.SkuId),
+			zap.Uint("quantity", cart.Quantity),
+		)
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
@@ -158,7 +164,6 @@ func GetCartListByUserId(userId uint) ([]models.CartItem, error) {
 		logger.Log.Error("查询购物车列表失败", zap.Error(err), zap.Uint("user_id", userId))
 		return nil, err
 	}
-	//logger.Log.Debug("<UNK>", zap.Any("list", list))
 	return list, nil
 }
 func GetCartById(userId, cartId uint) (*models.Cart, error) {
@@ -185,7 +190,6 @@ func GetCartById(userId, cartId uint) (*models.Cart, error) {
 	if cart.Id == 0 {
 		return nil, nil
 	}
-	//logger.Log.Debug("", zap.Any("cart", cart))
 	return &cart, nil
 }
 func UpdateCartChecked(userId uint, cartId uint, checked int) error {
@@ -209,7 +213,12 @@ func UpdateCartCheckedBatch(userId uint, cartIds []uint, checked int) error {
 		WHERE user_id = ? AND id IN ?`
 	err := util.Db.Exec(sql, checked, userId, cartIds).Error
 	if err != nil {
-		logger.Log.Error("批量更新购物车勾选状态失败", zap.Error(err), zap.Uint("user_id", userId), zap.Any("cart_ids", cartIds), zap.Int("checked", checked))
+		logger.Log.Error("批量更新购物车勾选状态失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+			zap.Int("cart_count", len(cartIds)),
+			zap.Int("checked", checked),
+		)
 		return err
 	}
 	return nil

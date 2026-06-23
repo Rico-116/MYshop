@@ -10,6 +10,7 @@ type User struct {
 	Phone     string    `json:"phone" gorm:"column:phone"`
 	Email     string    `json:"email" gorm:"column:email"`
 	Avatar    string    `json:"avatar" gorm:"column:avatar"`
+	Gender    int       `json:"gender" gorm:"column:gender"`
 	Status    int       `json:"status" gorm:"column:status"`
 	CreatedAt time.Time `json:"created_at" gorm:"column:created_at"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"column:update_at"`
@@ -53,4 +54,22 @@ type ResetPasswordRequest struct {
 	Code            string `json:"code"`
 	NewPassword     string `json:"new_password"`
 	ConfirmPassword string `json:"confirm_password"`
+}
+
+type UpdateUserProfileRequest struct {
+	Nickname   string `json:"nickname"`
+	Avatar     string `json:"avatar"`
+	Email      string `json:"email"`
+	Gender     string `json:"gender"`
+	GenderCode int    `json:"-" gorm:"-"`
+}
+
+type UserProfileResult struct {
+	UserId   uint   `json:"id"`
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
+	Email    string `json:"email"`
+	Avatar   string `json:"avatar"`
+	Gender   int    `json:"gender"`
+	Status   int    `json:"status"`
 }

@@ -1,11 +1,12 @@
 package util
 
 import (
+	"MYshop/package/logger"
 	"fmt"
-	"log"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.uber.org/zap"
 )
 
 var MQConn *amqp.Connection
@@ -18,6 +19,9 @@ const (
 	OrderCloseExecuteQueue    = "q.order.close.execute"
 	OrderCloseDelayRoutingKey = "order.close.delay"
 	OrderCloseRoutingKey      = "order.close"
+	SeckillOrderExchange      = "seckill.order.exchange"
+	SeckillOrderQueue         = "q.seckill.order"
+	SeckillOrderRoutingKey    = "seckill.order"
 )
 
 func InitRabbitMQ() error {
@@ -112,15 +116,57 @@ func InitRabbitMQ() error {
 		//logger.Log.Error("绑定执行关单队列失败", zap.Error(err))
 		return fmt.Errorf("绑定执行关单队列失败: %w", err)
 	}
-	log.Println("RabbitMQ初始化成功")
+	// 秒杀订单交换机
+	err = MQChannel.ExchangeDeclare(
+		SeckillOrderExchange,
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("声明秒杀订单交换机失败: %w", err)
+	}
+
+	// 秒杀订单队列
+	_, err = MQChannel.QueueDeclare(
+		SeckillOrderQueue,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("声明秒杀订单队列失败: %w", err)
+	}
+
+	// 秒杀队列绑定交换机
+	err = MQChannel.QueueBind(
+		SeckillOrderQueue,
+		SeckillOrderRoutingKey,
+		SeckillOrderExchange,
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("绑定秒杀订单队列失败: %w", err)
+	}
+	logger.Log.Info("rabbitmq initialized")
 	return nil
 }
 func CloseRabbitMQ() {
 	if MQChannel != nil {
-		_ = MQChannel.Close()
+		if err := MQChannel.Close(); err != nil {
+			logger.Log.Warn("rabbitmq channel close failed", zap.Error(err))
+		}
 	}
 	if MQConn != nil {
-		_ = MQConn.Close()
+		if err := MQConn.Close(); err != nil {
+			logger.Log.Warn("rabbitmq connection close failed", zap.Error(err))
+		}
 	}
 }
 func PublishWithConfirm(exchange, routingKey string, body []byte) error {

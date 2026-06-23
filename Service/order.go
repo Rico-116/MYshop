@@ -240,11 +240,11 @@ func GetOrderList(userId uint, req models.OrderListRequest) (*models.OrderListRe
 	if !isValidOrderStatusForQuery(req.Status) {
 		return nil, errors.New("订单状态参数错误")
 	}
-	list, err := dao.GetOrderListByUserId(userId, req.Status, req.Page, req.PageSize)
+	list, err := dao.GetMergedOrderListByUserId(userId, req.Status, req.Page, req.PageSize)
 	if err != nil {
 		return nil, err
 	}
-	total, err := dao.CountOrderListByUserId(userId, req.Status)
+	total, err := dao.CountMergedOrderListByUserId(userId, req.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -483,6 +483,15 @@ func GetOrderDetail(userId uint, orderNo string) (*models.OrderDetailResult, err
 	if err != nil {
 		return nil, err
 	}
+	seckillOrder, err := dao.GetSeckillOrderByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+	isSeckill := seckillOrder != nil
+	var seckillActivityId uint
+	if isSeckill {
+		seckillActivityId = seckillOrder.ActivityId
+	}
 	return &models.OrderDetailResult{
 		OrderId:               order.Id,
 		OrderNo:               order.OrderNo,
@@ -506,6 +515,8 @@ func GetOrderDetail(userId uint, orderNo string) (*models.OrderDetailResult, err
 		CloseTime:             order.CloseTime,
 		CreateTime:            order.CreatedAt,
 		UpdateTime:            order.UpdatedAt,
+		IsSeckill:             isSeckill,
+		SeckillActivityId:     seckillActivityId,
 		Items:                 items,
 	}, nil
 }
@@ -536,4 +547,108 @@ func DeleteUserOrder(userId uint, orderNo string) error {
 		return errors.New("删除失败，订单状态已变化")
 	}
 	return nil
+}
+
+func CancelUserOrder(userId uint, req models.CancelOrderRequest) (*models.CancelOrderResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+	orderNo := strings.TrimSpace(req.OrderNo)
+	if orderNo == "" {
+		return nil, errors.New("订单号不能为空")
+	}
+
+	order, err := dao.GetOrderByOrderNoAndUserId(userId, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil || order.Id == 0 {
+		return nil, errors.New("订单不存在")
+	}
+	if order.Status != models.OrderStatusUnpaid && order.Status != models.OrderStatusPaid {
+		return nil, errors.New("只有待支付或待发货订单可以取消")
+	}
+
+	tx := util.Db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
+
+	rows, err := dao.UpdateUserOrderToCanceledTx(tx, userId, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if rows == 0 {
+		return nil, errors.New("取消失败，订单状态已变化")
+	}
+
+	items, err := dao.GetOrderItemsByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if err := dao.RestoreSkuStockTx(tx, item.SkuId, item.Quantity); err != nil {
+			return nil, err
+		}
+	}
+
+	seckillOrder, err := dao.CancelSeckillOrderAndRestoreActivityStockTx(tx, orderNo)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	committed = true
+	if seckillOrder != nil {
+		rollbackRedisSeckill(seckillOrder.ActivityId, seckillOrder.UserId)
+	}
+
+	return &models.CancelOrderResult{
+		OrderNo:    orderNo,
+		Status:     models.OrderStatusCanceled,
+		StatusText: models.GetOrderStatusText(models.OrderStatusCanceled),
+	}, nil
+}
+
+func ConfirmReceive(userId uint, req models.ConfirmReceiveRequest) (*models.ConfirmReceiveResult, error) {
+	if userId == 0 {
+		return nil, errors.New("用户未登录")
+	}
+	orderNo := strings.TrimSpace(req.OrderNo)
+	if orderNo == "" {
+		return nil, errors.New("订单号不能为空")
+	}
+
+	order, err := dao.GetOrderByOrderNoAndUserId(userId, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil || order.Id == 0 {
+		return nil, errors.New("订单不存在")
+	}
+	if order.Status != models.OrderStatusShipped {
+		return nil, errors.New("只有待收货订单可以确认收货")
+	}
+
+	rows, err := dao.UpdateOrderToFinished(userId, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if rows == 0 {
+		return nil, errors.New("确认收货失败，订单状态已变化")
+	}
+
+	return &models.ConfirmReceiveResult{
+		OrderNo:    orderNo,
+		Status:     models.OrderStatusFinished,
+		StatusText: models.GetOrderStatusText(models.OrderStatusFinished),
+	}, nil
 }

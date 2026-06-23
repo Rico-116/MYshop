@@ -70,9 +70,9 @@ func CreateOrderTx(tx *gorm.DB, order *models.Order) (uint, error) {
 		INSERT INTO orders
 		(order_no, user_id, status, total_amount, pay_amount, coupon_amount, freight_amount,
 		 receiver_name, receiver_phone, receiver_province, receiver_city, receiver_district,
-		 receiver_detail_address, remark, created_at, updated_at)
+		 receiver_detail_address, remark, user_deleted, created_at, updated_at)
 		VALUES
-		(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+		(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW(), NOW())
 	`
 	result := tx.Exec(sql,
 		order.OrderNo,
@@ -91,7 +91,12 @@ func CreateOrderTx(tx *gorm.DB, order *models.Order) (uint, error) {
 		order.Remark,
 	)
 	if result.Error != nil {
-		logger.Log.Error("创建订单主表失败", zap.Error(result.Error), zap.Any("order", order))
+		logger.Log.Error("创建订单主表失败",
+			zap.Error(result.Error),
+			zap.String("order_no", order.OrderNo),
+			zap.Uint("user_id", order.UserId),
+			zap.Float64("pay_amount", order.PayAmount),
+		)
 		return 0, result.Error
 	}
 	var orderId uint
@@ -127,7 +132,13 @@ func CreateOrderItemTx(tx *gorm.DB, item *models.OrderItem) error {
 		item.TotalAmount,
 	).Error
 	if err != nil {
-		logger.Log.Error("创建订单明细失败", zap.Error(err), zap.Any("item", item))
+		logger.Log.Error("创建订单明细失败",
+			zap.Error(err),
+			zap.Uint("order_id", item.OrderId),
+			zap.String("order_no", item.OrderNo),
+			zap.Uint("product_id", item.ProductId),
+			zap.Uint("sku_id", item.SkuId),
+		)
 		return err
 	}
 	return nil
@@ -188,32 +199,34 @@ func RestoreSkuStockTx(tx *gorm.DB, skuId uint, quantity int) error {
 func GetOrderListByUserId(userId uint, status int, page int, pageSize int) ([]models.OrderListVO, error) {
 	var list []models.OrderListVO
 	offset := (page - 1) * pageSize
-	db := util.Db.Table("orders").Select(
-		"id",
-		"order_no",
-		"user_id",
-		"status",
-		"total_amount",
-		"pay_amount",
-		"freight_amount",
-		"receiver_name",
-		"receiver_phone",
-		"receiver_province",
-		"receiver_city",
-		"receiver_district",
-		"receiver_detail_address",
-		"remark",
-		"pay_time",
-		"delivery_time",
-		"finish_time",
-		"close_time",
-		"created_at",
-		"updated_at",
-	).Where("user_id", userId)
+	db := util.Db.Table("orders AS o").Select(
+		"o.id",
+		"o.order_no",
+		"o.user_id",
+		"o.status",
+		"o.total_amount",
+		"o.pay_amount",
+		"o.freight_amount",
+		"o.receiver_name",
+		"o.receiver_phone",
+		"o.receiver_province",
+		"o.receiver_city",
+		"o.receiver_district",
+		"o.receiver_detail_address",
+		"o.remark",
+		"o.pay_time",
+		"o.delivery_time",
+		"o.finish_time",
+		"o.close_time",
+		"o.created_at",
+		"o.updated_at",
+		"CASE WHEN so.id IS NULL THEN false ELSE true END AS is_seckill",
+		"COALESCE(so.activity_id, 0) AS seckill_activity_id",
+	).Joins("LEFT JOIN seckill_order AS so ON so.order_no = o.order_no").Where("o.user_id = ? AND COALESCE(o.user_deleted, 0) = 0", userId)
 	if status != models.OrderStatusAll {
-		db.Where("status=?", status)
+		db = db.Where("o.status = ?", status)
 	}
-	err := db.Order("created_at desc").Offset(offset).Limit(pageSize).Scan(&list).Error
+	err := db.Order("o.created_at desc").Offset(offset).Limit(pageSize).Scan(&list).Error
 	if err != nil {
 		logger.Log.Error("查询订单列表失败",
 			zap.Error(err),
@@ -227,13 +240,162 @@ func GetOrderListByUserId(userId uint, status int, page int, pageSize int) ([]mo
 
 func CountOrderListByUserId(userId uint, status int) (int, error) {
 	var total int64
-	db := util.Db.Table("orders")
+	db := util.Db.Table("orders").Where("user_id = ? AND COALESCE(user_deleted, 0) = 0", userId)
 	if status != models.OrderStatusAll {
-		db.Where("status=?", status)
+		db = db.Where("status = ?", status)
 	}
 	err := db.Count(&total).Error
 	if err != nil {
 		logger.Log.Error("统计订单数量失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+			zap.Int("status", status),
+		)
+		return 0, err
+	}
+	return int(total), nil
+}
+
+func GetMergedOrderListByUserId(userId uint, status int, page int, pageSize int) ([]models.OrderListVO, error) {
+	var list []models.OrderListVO
+	offset := (page - 1) * pageSize
+
+	normalStatusWhere := ""
+	seckillStatusWhere := ""
+	args := []interface{}{userId}
+	if status != models.OrderStatusAll {
+		normalStatusWhere = " AND o.status = ?"
+		seckillStatusWhere = " AND COALESCE(o.status, CASE WHEN so.status = 0 THEN 0 ELSE 1 END) = ?"
+		args = append(args, status)
+	}
+
+	sql := `
+		SELECT *
+		FROM (
+			SELECT
+				o.id,
+				o.order_no,
+				o.user_id,
+				o.status,
+				o.total_amount,
+				o.pay_amount,
+				o.freight_amount,
+				o.coupon_amount,
+				o.receiver_name,
+				o.receiver_phone,
+				o.receiver_province,
+				o.receiver_city,
+				o.receiver_district,
+				o.receiver_detail_address,
+				o.remark,
+				o.pay_time,
+				o.delivery_time,
+				o.finish_time,
+				o.close_time,
+				o.created_at,
+				o.updated_at,
+				0 AS is_seckill,
+				0 AS seckill_activity_id
+			FROM orders AS o
+			WHERE o.user_id = ?
+				AND COALESCE(o.user_deleted, 0) = 0
+				AND NOT EXISTS (
+					SELECT 1 FROM seckill_order AS sox WHERE sox.order_no = o.order_no
+				)` + normalStatusWhere + `
+
+			UNION ALL
+
+			SELECT
+				COALESCE(o.id, so.id) AS id,
+				so.order_no,
+				so.user_id,
+				COALESCE(o.status, CASE WHEN so.status = 0 THEN 0 ELSE 1 END) AS status,
+				COALESCE(o.total_amount, a.seckill_price, 0) AS total_amount,
+				COALESCE(o.pay_amount, a.seckill_price, 0) AS pay_amount,
+				COALESCE(o.freight_amount, 0) AS freight_amount,
+				COALESCE(o.coupon_amount, 0) AS coupon_amount,
+				COALESCE(o.receiver_name, '') AS receiver_name,
+				COALESCE(o.receiver_phone, '') AS receiver_phone,
+				COALESCE(o.receiver_province, '') AS receiver_province,
+				COALESCE(o.receiver_city, '') AS receiver_city,
+				COALESCE(o.receiver_district, '') AS receiver_district,
+				COALESCE(o.receiver_detail_address, '') AS receiver_detail_address,
+				COALESCE(o.remark, '秒杀订单') AS remark,
+				o.pay_time,
+				o.delivery_time,
+				o.finish_time,
+				o.close_time,
+				COALESCE(o.created_at, so.created_at) AS created_at,
+				COALESCE(o.updated_at, so.updated_at) AS updated_at,
+				1 AS is_seckill,
+				so.activity_id AS seckill_activity_id
+			FROM seckill_order AS so
+			LEFT JOIN orders AS o ON o.order_no = so.order_no
+			LEFT JOIN seckill_activity AS a ON a.id = so.activity_id
+			WHERE so.user_id = ?
+				AND (o.id IS NULL OR COALESCE(o.user_deleted, 0) = 0)` + seckillStatusWhere + `
+		) AS merged_orders
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`
+
+	args = append(args, userId)
+	if status != models.OrderStatusAll {
+		args = append(args, status)
+	}
+	args = append(args, pageSize, offset)
+
+	if err := util.Db.Raw(sql, args...).Scan(&list).Error; err != nil {
+		logger.Log.Error("查询合并订单列表失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+			zap.Int("status", status),
+		)
+		return nil, err
+	}
+	return list, nil
+}
+
+func CountMergedOrderListByUserId(userId uint, status int) (int, error) {
+	var total int64
+
+	normalStatusWhere := ""
+	seckillStatusWhere := ""
+	args := []interface{}{userId}
+	if status != models.OrderStatusAll {
+		normalStatusWhere = " AND o.status = ?"
+		seckillStatusWhere = " AND COALESCE(o.status, CASE WHEN so.status = 0 THEN 0 ELSE 1 END) = ?"
+		args = append(args, status)
+	}
+
+	sql := `
+		SELECT COUNT(*) AS total
+		FROM (
+			SELECT o.order_no
+			FROM orders AS o
+			WHERE o.user_id = ?
+				AND COALESCE(o.user_deleted, 0) = 0
+				AND NOT EXISTS (
+					SELECT 1 FROM seckill_order AS sox WHERE sox.order_no = o.order_no
+				)` + normalStatusWhere + `
+
+			UNION ALL
+
+			SELECT so.order_no
+			FROM seckill_order AS so
+			LEFT JOIN orders AS o ON o.order_no = so.order_no
+			WHERE so.user_id = ?
+				AND (o.id IS NULL OR COALESCE(o.user_deleted, 0) = 0)` + seckillStatusWhere + `
+		) AS merged_orders
+	`
+
+	args = append(args, userId)
+	if status != models.OrderStatusAll {
+		args = append(args, status)
+	}
+
+	if err := util.Db.Raw(sql, args...).Scan(&total).Error; err != nil {
+		logger.Log.Error("统计合并订单数量失败",
 			zap.Error(err),
 			zap.Uint("user_id", userId),
 			zap.Int("status", status),
@@ -267,7 +429,7 @@ func GetOrderItemsByOrderNos(orderNos []string) ([]models.OrderItemVO, error) {
 	if err != nil {
 		logger.Log.Error("批量查询订单商品失败",
 			zap.Error(err),
-			zap.Any("order_nos", orderNos))
+			zap.Int("order_no_count", len(orderNos)))
 		return nil, err
 	}
 
@@ -277,7 +439,7 @@ func GetOrderItemsByOrderNos(orderNos []string) ([]models.OrderItemVO, error) {
 func GetOrderByOrderNoAndUserId(userId uint, orderNo string) (*models.Order, error) {
 	var order models.Order
 	db := util.Db.Table("orders")
-	db = db.Select("id", "order_no", "user_id", "status", "total_amount", "pay_amount", "coupon_amount", "freight_amount", "receiver_name", "receiver_phone", "receiver_province", "receiver_city", "receiver_district", "receiver_detail_address", "remark", "pay_time", "delivery_time", "finish_time", "close_time", "created_at", "updated_at").Where("user_id = ? AND order_no=?", userId, orderNo)
+	db = db.Select("id", "order_no", "user_id", "status", "total_amount", "pay_amount", "coupon_amount", "freight_amount", "receiver_name", "receiver_phone", "receiver_province", "receiver_city", "receiver_district", "receiver_detail_address", "remark", "pay_time", "delivery_time", "finish_time", "close_time", "user_deleted", "created_at", "updated_at").Where("user_id = ? AND order_no = ? AND COALESCE(user_deleted, 0) = 0", userId, orderNo)
 	err := db.First(&order).Error
 	if err != nil {
 		logger.Log.Error("订单查询失败", zap.Error(err), zap.Uint("user_id", userId), zap.String("order_no", orderNo))
@@ -305,44 +467,183 @@ func AdminGetOrderList(status int, orderNo string, page, pageSize int) ([]models
 	var list []models.OrderListVO
 	var total int64
 
-	db := util.Db.Table("orders").Select(
-		"id",
-		"order_no",
-		"user_id",
-		"status",
-		"total_amount",
-		"pay_amount",
-		"freight_amount",
-		"coupon_amount",
-		"receiver_name",
-		"receiver_phone",
-		"receiver_province",
-		"receiver_city",
-		"receiver_district",
-		"receiver_detail_address",
-		"remark",
-		"pay_time",
-		"delivery_time",
-		"finish_time",
-		"close_time",
-		"created_at",
-		"updated_at",
-	)
+	db := util.Db.Table("orders AS o").Select(
+		"o.id",
+		"o.order_no",
+		"o.user_id",
+		"o.status",
+		"o.total_amount",
+		"o.pay_amount",
+		"o.freight_amount",
+		"o.coupon_amount",
+		"o.receiver_name",
+		"o.receiver_phone",
+		"o.receiver_province",
+		"o.receiver_city",
+		"o.receiver_district",
+		"o.receiver_detail_address",
+		"o.remark",
+		"o.pay_time",
+		"o.delivery_time",
+		"o.finish_time",
+		"o.close_time",
+		"o.created_at",
+		"o.updated_at",
+		"CASE WHEN so.id IS NULL THEN false ELSE true END AS is_seckill",
+		"COALESCE(so.activity_id, 0) AS seckill_activity_id",
+	).Joins("LEFT JOIN seckill_order AS so ON so.order_no = o.order_no")
 	if status != models.OrderStatusAll {
-		db = db.Where("status = ?", status)
+		db = db.Where("o.status = ?", status)
 	}
 	if orderNo != "" {
-		db = db.Where("order_no LIKE ?", "%"+orderNo+"%")
+		db = db.Where("o.order_no LIKE ?", "%"+orderNo+"%")
 	}
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
-	err := db.Order("created_at desc").Offset(offset).Limit(pageSize).Scan(&list).Error
+	err := db.Order("o.created_at desc").Offset(offset).Limit(pageSize).Scan(&list).Error
 	if err != nil {
 		return nil, 0, err
 	}
+	return list, total, nil
+}
+
+func AdminGetMergedOrderList(status int, orderNo string, page, pageSize int) ([]models.OrderListVO, int64, error) {
+	var list []models.OrderListVO
+	var total int64
+	offset := (page - 1) * pageSize
+
+	normalStatusWhere := ""
+	seckillStatusWhere := ""
+	normalOrderNoWhere := ""
+	seckillOrderNoWhere := ""
+	listArgs := make([]interface{}, 0)
+	countArgs := make([]interface{}, 0)
+
+	if status != models.OrderStatusAll {
+		normalStatusWhere = " AND o.status = ?"
+		seckillStatusWhere = " AND COALESCE(o.status, CASE WHEN so.status = 0 THEN 0 ELSE 1 END) = ?"
+		listArgs = append(listArgs, status)
+		countArgs = append(countArgs, status)
+	}
+	if orderNo != "" {
+		normalOrderNoWhere = " AND o.order_no LIKE ?"
+		seckillOrderNoWhere = " AND so.order_no LIKE ?"
+		likeOrderNo := "%" + orderNo + "%"
+		listArgs = append(listArgs, likeOrderNo)
+		countArgs = append(countArgs, likeOrderNo)
+	}
+
+	listSQL := `
+		SELECT *
+		FROM (
+			SELECT
+				o.id,
+				o.order_no,
+				o.user_id,
+				o.status,
+				o.total_amount,
+				o.pay_amount,
+				o.freight_amount,
+				o.coupon_amount,
+				o.receiver_name,
+				o.receiver_phone,
+				o.receiver_province,
+				o.receiver_city,
+				o.receiver_district,
+				o.receiver_detail_address,
+				o.remark,
+				o.pay_time,
+				o.delivery_time,
+				o.finish_time,
+				o.close_time,
+				o.created_at,
+				o.updated_at,
+				0 AS is_seckill,
+				0 AS seckill_activity_id
+			FROM orders AS o
+			WHERE NOT EXISTS (
+				SELECT 1 FROM seckill_order AS sox WHERE sox.order_no = o.order_no
+			)` + normalStatusWhere + normalOrderNoWhere + `
+
+			UNION ALL
+
+			SELECT
+				COALESCE(o.id, so.id) AS id,
+				so.order_no,
+				so.user_id,
+				COALESCE(o.status, CASE WHEN so.status = 0 THEN 0 ELSE 1 END) AS status,
+				COALESCE(o.total_amount, a.seckill_price, 0) AS total_amount,
+				COALESCE(o.pay_amount, a.seckill_price, 0) AS pay_amount,
+				COALESCE(o.freight_amount, 0) AS freight_amount,
+				COALESCE(o.coupon_amount, 0) AS coupon_amount,
+				COALESCE(o.receiver_name, '') AS receiver_name,
+				COALESCE(o.receiver_phone, '') AS receiver_phone,
+				COALESCE(o.receiver_province, '') AS receiver_province,
+				COALESCE(o.receiver_city, '') AS receiver_city,
+				COALESCE(o.receiver_district, '') AS receiver_district,
+				COALESCE(o.receiver_detail_address, '') AS receiver_detail_address,
+				COALESCE(o.remark, '秒杀订单') AS remark,
+				o.pay_time,
+				o.delivery_time,
+				o.finish_time,
+				o.close_time,
+				COALESCE(o.created_at, so.created_at) AS created_at,
+				COALESCE(o.updated_at, so.updated_at) AS updated_at,
+				1 AS is_seckill,
+				so.activity_id AS seckill_activity_id
+			FROM seckill_order AS so
+			LEFT JOIN orders AS o ON o.order_no = so.order_no
+			LEFT JOIN seckill_activity AS a ON a.id = so.activity_id
+			WHERE 1 = 1` + seckillStatusWhere + seckillOrderNoWhere + `
+		) AS merged_orders
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`
+
+	if status != models.OrderStatusAll {
+		listArgs = append(listArgs, status)
+	}
+	if orderNo != "" {
+		listArgs = append(listArgs, "%"+orderNo+"%")
+	}
+	listArgs = append(listArgs, pageSize, offset)
+
+	if err := util.Db.Raw(listSQL, listArgs...).Scan(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	countSQL := `
+		SELECT COUNT(*) AS total
+		FROM (
+			SELECT o.order_no
+			FROM orders AS o
+			WHERE NOT EXISTS (
+				SELECT 1 FROM seckill_order AS sox WHERE sox.order_no = o.order_no
+			)` + normalStatusWhere + normalOrderNoWhere + `
+
+			UNION ALL
+
+			SELECT so.order_no
+			FROM seckill_order AS so
+			LEFT JOIN orders AS o ON o.order_no = so.order_no
+			WHERE 1 = 1` + seckillStatusWhere + seckillOrderNoWhere + `
+		) AS merged_orders
+	`
+
+	if status != models.OrderStatusAll {
+		countArgs = append(countArgs, status)
+	}
+	if orderNo != "" {
+		countArgs = append(countArgs, "%"+orderNo+"%")
+	}
+
+	if err := util.Db.Raw(countSQL, countArgs...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	return list, total, nil
 }
 
@@ -379,7 +680,7 @@ func AdminUpdateOrderToCanceledTx(tx *gorm.DB, orderNo string) (int64, error) {
 }
 func UpdateOrderUserDeleted(userId uint, orderNo string) (int64, error) {
 	result := util.Db.Table("orders").
-		Where("user_id = ? AND order_no = ? AND user_deleted = 0", userId, orderNo).
+		Where("user_id = ? AND order_no = ? AND COALESCE(user_deleted, 0) = 0 AND status IN ?", userId, orderNo, []int{models.OrderStatusCanceled, models.OrderStatusFinished}).
 		Updates(map[string]interface{}{
 			"user_deleted": 1,
 			"updated_at":   gorm.Expr("NOW()"),
@@ -393,4 +694,43 @@ func UpdateOrderUserDeleted(userId uint, orderNo string) (int64, error) {
 		return 0, result.Error
 	}
 	return result.RowsAffected, nil
+}
+
+func UpdateUserOrderToCanceledTx(tx *gorm.DB, userId uint, orderNo string) (int64, error) {
+	result := tx.Table("orders").
+		Where("user_id = ? AND order_no = ? AND COALESCE(user_deleted, 0) = 0 AND status IN ?", userId, orderNo, []int{models.OrderStatusUnpaid, models.OrderStatusPaid}).
+		Updates(map[string]interface{}{
+			"status":     models.OrderStatusCanceled,
+			"close_time": gorm.Expr("NOW()"),
+			"updated_at": gorm.Expr("NOW()"),
+		})
+	return result.RowsAffected, result.Error
+}
+
+func UpdateOrderToFinished(userId uint, orderNo string) (int64, error) {
+	result := util.Db.Table("orders").
+		Where("user_id = ? AND order_no = ? AND status = ? AND COALESCE(user_deleted, 0) = 0", userId, orderNo, models.OrderStatusShipped).
+		Updates(map[string]interface{}{
+			"status":      models.OrderStatusFinished,
+			"finish_time": gorm.Expr("NOW()"),
+			"updated_at":  gorm.Expr("NOW()"),
+		})
+	return result.RowsAffected, result.Error
+}
+
+func GetOrderItemByOrderProduct(userId uint, orderNo string, productId uint, skuId uint) (*models.OrderItem, error) {
+	var item models.OrderItem
+	db := util.Db.Table("order_item").
+		Where("user_id = ? AND order_no = ? AND product_id = ?", userId, orderNo, productId)
+	if skuId > 0 {
+		db = db.Where("sku_id = ?", skuId)
+	}
+	err := db.Order("id asc").Limit(1).Scan(&item).Error
+	if err != nil {
+		return nil, err
+	}
+	if item.Id == 0 {
+		return nil, nil
+	}
+	return &item, nil
 }

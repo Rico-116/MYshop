@@ -23,7 +23,7 @@ func GetAdminOrderList(status int, orderNo string, page, pageSize int) (*models.
 		return nil, errors.New("订单状态参数错误")
 	}
 
-	list, total, err := dao.AdminGetOrderList(status, orderNo, page, pageSize)
+	list, total, err := dao.AdminGetMergedOrderList(status, orderNo, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +70,15 @@ func GetAdminOrderDetail(orderNo string) (*models.OrderDetailResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	seckillOrder, err := dao.GetSeckillOrderByOrderNo(orderNo)
+	if err != nil {
+		return nil, err
+	}
+	isSeckill := seckillOrder != nil
+	var seckillActivityId uint
+	if isSeckill {
+		seckillActivityId = seckillOrder.ActivityId
+	}
 
 	return &models.OrderDetailResult{
 		OrderId:               order.Id,
@@ -94,6 +103,8 @@ func GetAdminOrderDetail(orderNo string) (*models.OrderDetailResult, error) {
 		CloseTime:             order.CloseTime,
 		CreateTime:            order.CreatedAt,
 		UpdateTime:            order.UpdatedAt,
+		IsSeckill:             isSeckill,
+		SeckillActivityId:     seckillActivityId,
 		Items:                 items,
 	}, nil
 }
@@ -171,10 +182,18 @@ func CancelAdminOrder(req models.AdminCancelOrderRequest) (*models.OrderDetailRe
 		}
 	}
 
+	seckillOrder, err := dao.CancelSeckillOrderAndRestoreActivityStockTx(tx, orderNo)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
 	committed = true
+	if seckillOrder != nil {
+		rollbackRedisSeckill(seckillOrder.ActivityId, seckillOrder.UserId)
+	}
 	return GetAdminOrderDetail(orderNo)
 }
 

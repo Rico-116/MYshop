@@ -168,6 +168,45 @@ func GetProductSkuListWithCache(productID int) ([]models.ProductSku, error) {
 	}
 	return list, nil
 }
+func GetCategoryDetailWithCache(categoryID uint) (*models.Category, error) {
+	if categoryID == 0 {
+		return nil, errors.New("category id is empty")
+	}
+
+	key := util.CategoryDetailKey(categoryID)
+	val, err := util.RDB.Get(util.Ctx, key).Result()
+	if err == nil {
+		if val == util.CacheNullValue {
+			return nil, nil
+		}
+		var category models.Category
+		if e := json.Unmarshal([]byte(val), &category); e == nil {
+			return &category, nil
+		} else {
+			logger.Log.Warn("分类详情缓存反序列化失败", zap.Error(e), zap.Uint("category_id", categoryID))
+		}
+	}
+	if err != nil && !errors.Is(err, redis.Nil) {
+		logger.Log.Warn("读取分类详情缓存失败", zap.Error(err), zap.Uint("category_id", categoryID))
+	}
+
+	category, err := dao.GetSkuCategoryById(categoryID)
+	if err != nil {
+		return nil, err
+	}
+	if category == nil || category.Id == 0 {
+		if e := util.RDB.Set(util.Ctx, key, util.CacheNullValue, withJitter(NullCacheTTL, 60)).Err(); e != nil {
+			logger.Log.Warn("写入分类空值缓存失败", zap.Error(e), zap.Uint("category_id", categoryID))
+		}
+		return nil, nil
+	}
+
+	data, _ := json.Marshal(category)
+	if e := util.RDB.Set(util.Ctx, key, data, withJitter(ProductCategoryTTL, 120)).Err(); e != nil {
+		logger.Log.Warn("写入分类详情缓存失败", zap.Error(e), zap.Uint("category_id", categoryID))
+	}
+	return category, nil
+}
 func GetProductListByCategoryWithCache(categoryID int) ([]models.Product, error) {
 	key := util.ProductCategoryListKey(categoryID)
 	val, err := util.RDB.Get(util.Ctx, key).Result()

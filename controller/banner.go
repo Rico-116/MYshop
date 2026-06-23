@@ -15,6 +15,6 @@ func GetBannerList(c *gin.Context) {
 		util.Fail(c, 500, "轮播图获取失败")
 		return
 	}
-	logger.Log.Info("轮播图获取成功", zap.Any("list", list))
+	logger.Log.Info("轮播图获取成功", zap.Int("count", len(list)))
 	util.Success(c, "获取轮播图成功", gin.H{"list": list})
 }

@@ -18,7 +18,11 @@ func AdminCreateProduct(c *gin.Context) {
 	}
 	product, err := Service.CreateAdminProduct(req)
 	if err != nil {
-		logger.Log.Warn("管理员新增商品失败", zap.Error(err), zap.Any("req", req))
+		logger.Log.Warn("管理员新增商品失败",
+			zap.Error(err),
+			zap.Uint("category_id", req.CategoryId),
+			zap.String("name", req.Name),
+		)
 		util.Fail(c, 400, err.Error())
 		return
 	}
@@ -97,7 +101,10 @@ func AdminUpdateProduct(c *gin.Context) {
 	}
 	product, err := Service.UpdateAdminProduct(uint(productId), req)
 	if err != nil {
-		logger.Log.Warn("管理员修改商品失败", zap.Error(err), zap.Any("req", req))
+		logger.Log.Warn("管理员修改商品失败",
+			zap.Error(err),
+			zap.Uint("product_id", uint(productId)),
+		)
 		util.Fail(c, 400, err.Error())
 		return
 	}
@@ -125,7 +132,11 @@ func AdminCreateProductSku(c *gin.Context) {
 	}
 	sku, err := Service.CreateAdminProductSku(req)
 	if err != nil {
-		logger.Log.Warn("管理员新增商品SKU失败", zap.Error(err), zap.Any("req", req))
+		logger.Log.Warn("管理员新增商品SKU失败",
+			zap.Error(err),
+			zap.Uint("product_id", req.ProductId),
+			zap.String("sku_code", req.SkuCode),
+		)
 		util.Fail(c, 400, err.Error())
 		return
 	}

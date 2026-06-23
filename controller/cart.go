@@ -33,7 +33,7 @@ func AddCart(c *gin.Context) {
 	}
 	err = Service.AddCart(productSku.ProductId, userId, req.SkuId, int(req.Quantity))
 	if err != nil {
-		logger.Log.Error("加入购物车失败", zap.Error(err), zap.Error(err), zap.Uint("user_id", userId), zap.Uint("sku_id", req.SkuId))
+		logger.Log.Error("加入购物车失败", zap.Error(err), zap.Uint("user_id", userId), zap.Uint("sku_id", req.SkuId))
 		util.Fail(c, 500, err.Error())
 		return
 	}
@@ -42,8 +42,6 @@ func AddCart(c *gin.Context) {
 func GetCartList(c *gin.Context) {
 	userId := c.GetUint("user_id")
 	if userId == 0 {
-		//logger.Log.Warn("未登录")
-		//fmt.Println(userId, "用户未登录")
 		util.Fail(c, 401, "用户未登录，请先登录")
 		return
 	}
@@ -66,7 +64,12 @@ func GetCartList(c *gin.Context) {
 			selectedAmount += item.TotalAmount
 		}
 	}
-	logger.Log.Info("获取购物车列表成功", zap.Uint("user_id", userId))
+	logger.Log.Info("获取购物车列表成功",
+		zap.Uint("user_id", userId),
+		zap.Int("count", len(list)),
+		zap.Int("selected_count", selectedCount),
+		zap.Int("invalid_count", invalidCount),
+	)
 	util.Success(c, "获取购物车列表成功", gin.H{
 		"list": list,
 		"summary": gin.H{
@@ -92,12 +95,6 @@ func UpdateCartQuantity(c *gin.Context) {
 		util.Fail(c, 400, "参数错误")
 		return
 	}
-	//userID64, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
-	//if err != nil {
-	//	util.Fail(c, 400, "用户信息异常")
-	//	return
-	//}
-	//logger.Log.Debug("", zap.Uint("user_id", userId), zap.Uint("cartId", req.CartId))
 	if err := Service.UpdateCartQuantity(userId, req.CartId, int(req.Quantity)); err != nil {
 		logger.Log.Warn("修改购物车数量失败", zap.Error(err))
 		util.Fail(c, 500, err.Error())
@@ -113,8 +110,7 @@ func UpdateCartChecked(c *gin.Context) {
 	}
 	var req models.UpdateCartCheckRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Debug("<UNK>", zap.Error(err))
-		println(err.Error())
+		logger.Log.Warn("修改购物车勾选状态参数错误", zap.Error(err), zap.Uint("user_id", userId))
 		util.Fail(c, 400, "参数错误")
 		return
 	}
@@ -145,11 +141,6 @@ func DeleteCart(c *gin.Context) {
 		util.Fail(c, 400, "参数错误")
 		return
 	}
-	//userID64, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
-	//if err != nil {
-	//	util.Fail(c, 400, "用户信息异常")
-	//	return
-	//}
 	if err := Service.DeleteCartItem(userId, req.CartId); err != nil {
 		logger.Log.Warn("删除购物车失败", zap.Error(err))
 		util.Fail(c, 500, err.Error())

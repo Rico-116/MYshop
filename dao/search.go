@@ -27,7 +27,8 @@ func SearchProductList(req models.SearchProductRequest) ([]models.Product, int64
 	}
 
 	if err := db.Count(&total).Error; err != nil {
-		logger.Log.Error("搜索商品数量统计失败", zap.Error(err), zap.Any("req", req))
+		fields := append(searchRequestLogFields(req), zap.Error(err))
+		logger.Log.Error("搜索商品数量统计失败", fields...)
 		return nil, 0, err
 	}
 
@@ -67,9 +68,29 @@ func SearchProductList(req models.SearchProductRequest) ([]models.Product, int64
 		Limit(req.PageSize).
 		Scan(&list).Error
 	if err != nil {
-		logger.Log.Error("搜索商品列表失败", zap.Error(err), zap.Any("req", req))
+		fields := append(searchRequestLogFields(req), zap.Error(err))
+		logger.Log.Error("搜索商品列表失败", fields...)
 		return nil, 0, err
 	}
 
 	return list, total, nil
+}
+
+func searchRequestLogFields(req models.SearchProductRequest) []zap.Field {
+	fields := []zap.Field{
+		zap.String("keyword", req.Keyword),
+		zap.String("sort", req.Sort),
+		zap.Int("page", req.Page),
+		zap.Int("page_size", req.PageSize),
+	}
+	if req.CategoryId != nil {
+		fields = append(fields, zap.Uint("category_id", *req.CategoryId))
+	}
+	if req.MinPrice != nil {
+		fields = append(fields, zap.Float64("min_price", *req.MinPrice))
+	}
+	if req.MaxPrice != nil {
+		fields = append(fields, zap.Float64("max_price", *req.MaxPrice))
+	}
+	return fields
 }

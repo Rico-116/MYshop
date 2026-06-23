@@ -103,9 +103,18 @@ func HandleOrderClose(orderNo string) error {
 			return err
 		}
 	}
+
+	seckillOrder, err := dao.CancelSeckillOrderAndRestoreActivityStockTx(tx, orderNo)
+	if err != nil {
+		return err
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return err
 	}
 	committed = true
+	if seckillOrder != nil {
+		rollbackRedisSeckill(seckillOrder.ActivityId, seckillOrder.UserId)
+	}
 	return nil
 }

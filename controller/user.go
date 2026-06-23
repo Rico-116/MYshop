@@ -139,7 +139,7 @@ func SendLoginCode(c *gin.Context) {
 	}
 	logger.Log.Info("验证码发送成功",
 		zap.String("ip", c.ClientIP()),
-		zap.String("Email", req.Email))
+		zap.String("email", req.Email))
 	util.Success(c, "验证码发送成功", gin.H{
 		"expire_seconds": 300,
 	})
@@ -154,10 +154,11 @@ func SendResetPasswordCode(c *gin.Context) {
 	err := Service.SendResetPasswordCode(req)
 	if err != nil {
 		util.Fail(c, 400, err.Error())
+		return
 	}
 	logger.Log.Info("重置验证码发送成功",
 		zap.String("ip", c.ClientIP()),
-		zap.String("Email", req.Email))
+		zap.String("email", req.Email))
 	util.Success(c, "重置验证码发送成功", gin.H{
 		"expire_seconds": 300,
 	})
@@ -178,7 +179,6 @@ func EmailLogin(c *gin.Context) {
 	logger.Log.Info("登录成功",
 		zap.Uint("user_id", user.UserId),
 		zap.String("email", req.Email),
-		zap.String("token", token),
 		zap.String("username", user.Username))
 	util.Success(c, "登录成功", gin.H{
 		"token":    token,
@@ -189,6 +189,56 @@ func EmailLogin(c *gin.Context) {
 }
 func DeleteUser(c *gin.Context) {
 
+}
+
+func GetUserProfile(c *gin.Context) {
+	userId := c.GetUint("user_id")
+	if userId == 0 {
+		util.Fail(c, 401, "请先登录")
+		return
+	}
+
+	result, err := Service.GetUserProfile(userId)
+	if err != nil {
+		logger.Log.Warn("获取个人信息失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+		)
+		util.Fail(c, 400, err.Error())
+		return
+	}
+
+	util.Success(c, "获取个人信息成功", result)
+}
+
+func UpdateUserProfile(c *gin.Context) {
+	userId := c.GetUint("user_id")
+	if userId == 0 {
+		util.Fail(c, 401, "请先登录")
+		return
+	}
+
+	var req models.UpdateUserProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Log.Warn("编辑个人信息参数错误",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+		)
+		util.Fail(c, 400, "参数错误")
+		return
+	}
+
+	result, err := Service.UpdateUserProfile(userId, req)
+	if err != nil {
+		logger.Log.Warn("编辑个人信息失败",
+			zap.Error(err),
+			zap.Uint("user_id", userId),
+		)
+		util.Fail(c, 400, err.Error())
+		return
+	}
+
+	util.Success(c, "编辑个人信息成功", result)
 }
 func ResetPassword(c *gin.Context) {
 	var req models.ResetPasswordRequest
